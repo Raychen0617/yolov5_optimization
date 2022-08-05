@@ -26,6 +26,8 @@ import yaml
 from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import DataLoader, Dataset, dataloader, distributed
 from tqdm import tqdm
+from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision import transforms
 
 from utils.augmentations import Albumentations, augment_hsv, copy_paste, letterbox, mixup, random_perspective
 from utils.general import (DATASETS_DIR, LOGGER, NUM_THREADS, check_dataset, check_requirements, check_yaml, clean_str,
@@ -94,6 +96,47 @@ def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2 ** 32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
+
+def create_cifar(datasetname):
+
+    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+
+    if datasetname == "CIFAR100":
+
+        dataset_train = CIFAR100('../datasets', train=True, transform=transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32, 4),
+                transforms.Resize((640,640)),
+                transforms.ToTensor(),
+                normalize,
+        ]), download=False)
+
+
+        dataset_valid = CIFAR100('../datasets', train=False, transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((640,640)),
+                normalize,
+        ]))
+
+    
+    elif datasetname == "CIFAR10":
+
+        dataset_train = CIFAR10('../datasets', train=True, transform=transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32, 4),
+                transforms.Resize((640,640)),
+                transforms.ToTensor(),
+                normalize,
+        ]), download=False)
+
+
+        dataset_valid = CIFAR10('../datasets', train=False, transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((640,640)),
+                normalize,
+        ]))
+
+    return dataset_train, dataset_valid
 
 
 def create_dataloader(path,
