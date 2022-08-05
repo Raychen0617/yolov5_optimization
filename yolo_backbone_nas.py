@@ -35,8 +35,7 @@ class NASBACKBONE(nn.Module):
 
 device = torch.device("cuda:0")
 model = NASBACKBONE().to(device=device)
-#torch.save(model,"backbone.pt")
-#print(model)
+
 #INPUT
 imgsz = (640, 640)
 imgsz *= 2 if len(imgsz) == 1 else 1 # expand
@@ -44,8 +43,6 @@ imgsz *= 2 if len(imgsz) == 1 else 1 # expand
 gs = 32 # grid size (max stride)
 imgsz = [check_img_size(x, gs) for x in imgsz] # verify img_size are gs-multiples
 im = torch.zeros(1, 3, *imgsz).to(device) # image size(1,3,320,192) BCHW iDetection
-
-#yolo = Model(cfg='./models/yolov5s.yaml').to(device=device)
 
 normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
 
@@ -118,9 +115,10 @@ trainer = DartsTrainer(model,
                         unrolled=False)
 trainer.enable_visualization()
 trainer.train()  # training
-trainer.export(file="./nas.json")  # export the final architecture to file
+trainer.export(file="./output/nas_yolov5xb.json")  # export the final architecture to file
 print(model)
 torch.save(model,"./checkpoint/nas_yolov5xb.pt")
+
 '''
 # ENAS
 from nni.algorithms.nas.pytorch import enas
@@ -136,11 +134,5 @@ trainer = enas.EnasTrainer(model,
                            log_frequency=10,
                            workers=0
                         )
-
-
-# load back model dict
-yolo = Model(cfg=cfg).to(device=device)
-backbone = torch.load("backbone.pt")
-yolo.load_state_dict(backbone.state_dict(), strict=False)
 '''
 
