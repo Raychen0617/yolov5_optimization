@@ -12,6 +12,7 @@ from copy import copy
 from pathlib import Path
 
 import cv2
+from matplotlib import offsetbox
 import numpy as np
 import pandas as pd
 import requests
@@ -26,13 +27,67 @@ from utils.general import (LOGGER, check_requirements, check_suffix, check_versi
                            make_divisible, non_max_suppression, scale_coords, xywh2xyxy, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import copy_attr, time_sync
-
+from nni.nas.pytorch import mutables
 
 def autopad(k, p=None):  # kernel, padding
     # Pad to 'same'
     if p is None:
         p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
     return p
+
+
+def conv_2d_output_shape(h_w, kernel_size=1, stride=1, pad=0):
+
+    """
+    Utility function for computing output shape of 2d-convolutions
+    input:
+        (h,w)(tuple): (height, width) of input
+        kernel_size: kernel size of kernel
+        stride: stride of convolution
+        pad: padding of convolution
+        dilation: dilation of convolution
+ 
+    output:
+       (h,w)(tuple): (height, width) of output
+    """
+    dilation=1
+    if type(kernel_size) is not tuple:
+        kernel_size = (kernel_size, kernel_size)
+    h = math.floor( ((h_w[0] + (2 * pad) - ( dilation * (kernel_size[0] - 1) ) - 1 )/ stride) + 1)
+    w = math.floor( ((h_w[1] + (2 * pad) - ( dilation * (kernel_size[1] - 1) ) - 1 )/ stride) + 1)
+    return (h, w)
+
+
+class NASConv(nn.Module):
+    # Standard convolution
+    def __init__(self, c1, c2, inputshape=(), k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
+        super().__init__()
+
+        choice = [nn.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)]
+        outputshape = conv_2d_output_shape(inputshape, k, s, autopad(k, p))
+        for offsetk in (-2 , 2):
+                for offsetpad in range(0 if p is None else -1*p,4):
+                    #print(conv_2d_output_shape(inputshape, k+offsetk , s, autopad( k, p)+offsetpad), outputshape)
+                    if conv_2d_output_shape(inputshape, k+offsetk , s, autopad(k, p)+offsetpad) == outputshape:
+                        choice.append(nn.Conv2d(c1, c2, k+offsetk, s, autopad(k, p)+offsetpad, groups=g, bias=False))
+        
+        self.conv  = mutables.LayerChoice(choice)
+        
+        self.shape = nn.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)
+        self.bn = nn.BatchNorm2d(c2)
+        self.act = nn.SiLU() if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.act(x)
+        return x
+
+    def forward_fuse(self, x):
+        return self.act(self.conv(x))
+    
+    def forward_shape(self, x):
+        return self.act(self.shape(x))
 
 
 class Conv(nn.Module):
@@ -44,7 +99,10 @@ class Conv(nn.Module):
         self.act = nn.SiLU() if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
 
     def forward(self, x):
-        return self.act(self.bn(self.conv(x)))
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.act(x)
+        return x
 
     def forward_fuse(self, x):
         return self.act(self.conv(x))
@@ -387,13 +445,13 @@ class DetectMultiBackend(nn.Module):
             context = model.create_execution_context()
             bindings = OrderedDict()
             fp16 = False  # default updated below
-            dynamic = False
+            dynamic_input = False
             for index in range(model.num_bindings):
                 name = model.get_binding_name(index)
                 dtype = trt.nptype(model.get_binding_dtype(index))
                 if model.binding_is_input(index):
                     if -1 in tuple(model.get_binding_shape(index)):  # dynamic
-                        dynamic = True
+                        dynamic_input = True
                         context.set_binding_shape(index, tuple(model.get_profile_shape(0, index)[2]))
                     if dtype == np.float16:
                         fp16 = True
@@ -471,13 +529,12 @@ class DetectMultiBackend(nn.Module):
             im = im.cpu().numpy()  # FP32
             y = self.executable_network([im])[self.output_layer]
         elif self.engine:  # TensorRT
-            if self.dynamic and im.shape != self.bindings['images'].shape:
-                i_in, i_out = (self.model.get_binding_index(x) for x in ('images', 'output'))
-                self.context.set_binding_shape(i_in, im.shape)  # reshape if dynamic
+            if im.shape != self.bindings['images'].shape and self.dynamic_input:
+                self.context.set_binding_shape(self.model.get_binding_index('images'), im.shape)  # reshape if dynamic
                 self.bindings['images'] = self.bindings['images']._replace(shape=im.shape)
-                self.bindings['output'].data.resize_(tuple(self.context.get_binding_shape(i_out)))
-            s = self.bindings['images'].shape
-            assert im.shape == s, f"input size {im.shape} {'>' if self.dynamic else 'not equal to'} max model size {s}"
+            assert im.shape == self.bindings['images'].shape, (
+                f"image shape {im.shape} exceeds model max shape {self.bindings['images'].shape}" if self.dynamic_input
+                else f"image shape {im.shape} does not match model shape {self.bindings['images'].shape}")
             self.binding_addrs['images'] = int(im.data_ptr())
             self.context.execute_v2(list(self.binding_addrs.values()))
             y = self.bindings['output'].data
@@ -563,9 +620,6 @@ class AutoShape(nn.Module):
         self.dmb = isinstance(model, DetectMultiBackend)  # DetectMultiBackend() instance
         self.pt = not self.dmb or model.pt  # PyTorch model
         self.model = model.eval()
-        if self.pt:
-            m = self.model.model.model[-1] if self.dmb else self.model.model[-1]  # Detect()
-            m.inplace = False  # Detect.inplace=False for safe multithread inference
 
     def _apply(self, fn):
         # Apply to(), cpu(), cuda(), half() to model tensors that are not parameters or registered buffers
