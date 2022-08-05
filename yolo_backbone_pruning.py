@@ -16,6 +16,8 @@ from models.experimental import attempt_load
 from export import export_torchscript
 
 device = torch.device("cuda:0")
+
+# LOAD MODELS
 #model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 #model = attempt_load('yolov5s.pt', inplace=True, fuse=False, device=device) # load FP32 model
 model = Model(cfg='./models/yolov5s.yaml').to(device=device)
@@ -25,13 +27,6 @@ model.eval()
 dummy_input = torch.rand(1, 3, 640, 640).to(device=device)
 print(model(dummy_input)[0].shape)
 
-
-'''
-class SiLU(nn.Module):  # export-friendly version of nn.SiLU()
-    @staticmethod
-    def forward(x):
-        return x * torch.sigmoid(x)
-'''
 
 for k, m in model.named_modules():
     #print(k)
@@ -98,9 +93,9 @@ torch.save(model,"./checkpoint/pruned_yolov5s.pt")
 start = time.time()
 for _ in range(100):
     use_mask_out = model(im)
-
+'''
 dummy_input = torch.rand(1, 3, 640, 640).to(device=device)
 print(model(dummy_input)[0].shape)
-
+'''
 
 print('elapsed time when use mask: ', (time.time() - start)*100)
