@@ -10,59 +10,20 @@ import torch.nn as nn
 from nni.compression.pytorch.utils.counter import count_flops_params
 import time 
 from nni.compression.pytorch.utils import not_safe_to_prune
-from models.yolo import Backbone, Model
+from models.yolo import NASBACKBONE, Backbone, Model
 from models.common import *
 from models.experimental import attempt_load
 from export import export_torchscript
 from torchvision.datasets import CIFAR100
 from torchvision import transforms
-
-# Create backbone 
-class NASBACKBONE(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.backbone = Backbone(cfg='./models/yolov5xb.yaml').to(device=device)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.head = nn.Linear(1280, 100, bias=True)
-        
-    def forward(self, x):
-        x = self.backbone(x)
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.head(x)
-        return x
-
+from utils.dataloaders import create_tinyimagenet
 
 device = torch.device("cuda:0")
-model = NASBACKBONE().to(device=device)
+model = NASBACKBONE(cfg="yolov5sb_nas.yaml", nc=200).to(device=device)
 
-#INPUT
-imgsz = (640, 640)
-imgsz *= 2 if len(imgsz) == 1 else 1 # expand
-
-gs = 32 # grid size (max stride)
-imgsz = [check_img_size(x, gs) for x in imgsz] # verify img_size are gs-multiples
-im = torch.zeros(1, 3, *imgsz).to(device) # image size(1,3,320,192) BCHW iDetection
-
-normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-
-dataset_train = CIFAR100('../datasets', train=True, transform=transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomCrop(32, 4),
-        transforms.Resize((640,640)),
-        transforms.ToTensor(),
-        normalize,
-]), download=True)
-
-
-dataset_valid = CIFAR100('../datasets', train=False, transform=transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize((640,640)),
-        normalize,
-]))
-
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), 0.05, momentum=0.9, weight_decay=1.0E-4)
+dataset_train, dataset_valid, train_loader, test_loader = create_tinyimagenet(batchsize=1024)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, weight_decay=2e-5)
+criterion = torch.nn.CrossEntropyLoss()
 
 
 def accuracy(output, target, topk=(1,)):
@@ -115,9 +76,8 @@ trainer = DartsTrainer(model,
                         unrolled=False)
 trainer.enable_visualization()
 trainer.train()  # training
-trainer.export(file="./output/nas_yolov5xb.json")  # export the final architecture to file
-print(model)
-torch.save(model,"./checkpoint/nas_yolov5xb.pt")
+trainer.export(file="./output/nas_yolov5sb.json")  # export the final architecture to file
+torch.save(model,"./checkpoint/nas_yolov5sb.pt")
 
 '''
 # ENAS
