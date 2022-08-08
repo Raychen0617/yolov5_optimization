@@ -28,11 +28,40 @@ from utils.general import LOGGER, check_version, check_yaml, make_divisible, pri
 from utils.plots import feature_visualization
 from utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
                                time_sync)
+from vision_toolbox import backbones
 
 try:
     import thop  # for FLOPs computation
 except ImportError:
     thop = None
+
+
+
+class BACKBONE(nn.Module):
+
+    def __init__(self, cfg, nc):
+        super().__init__()
+        self.backbone = Backbone(cfg=cfg)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+        if cfg[cfg.find("yolov5") + 6] == 'x':
+            self.head = nn.Linear(1280, nc, bias=True)
+        elif cfg[cfg.find("yolov5") + 6] == 's':
+            self.head = nn.Linear(512, nc, bias=True)
+        elif cfg[cfg.find("yolov5") + 6] == 'm':
+            self.head = nn.Linear(768, nc, bias=True)
+        elif cfg[cfg.find("yolov5") + 6] == 'n':
+            self.head = nn.Linear(256, nc, bias=True)
+        else:
+            print("error loading models in backbone")
+    
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.head(x)
+        return x
+
 
 
 class Detect(nn.Module):

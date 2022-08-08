@@ -27,6 +27,7 @@ from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import DataLoader, Dataset, dataloader, distributed
 from tqdm import tqdm
 from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision import datasets
 from torchvision import transforms
 
 from utils.augmentations import Albumentations, augment_hsv, copy_paste, letterbox, mixup, random_perspective
@@ -45,6 +46,90 @@ LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable
 for orientation in ExifTags.TAGS.keys():
     if ExifTags.TAGS[orientation] == 'Orientation':
         break
+
+
+def create_cifar(datasetname, batchsize):
+
+    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+
+    if datasetname == "CIFAR100":
+
+        dataset_train = CIFAR100('../datasets', train=True, transform=transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32, 4),
+                transforms.Resize((640,640)),
+                transforms.ToTensor(),
+                normalize,
+        ]), download=False)
+
+
+        dataset_test = CIFAR100('../datasets', train=False, transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((640,640)),
+                normalize,
+        ]))
+
+    
+    elif datasetname == "CIFAR10":
+
+        dataset_train = CIFAR10('../datasets', train=True, transform=transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32, 4),
+                transforms.Resize((640,640)),
+                transforms.ToTensor(),
+                normalize,
+        ]), download=False)
+
+
+        dataset_test = CIFAR10('../datasets', train=False, transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((640,640)),
+                normalize,
+        ]))
+
+    else:
+        print("dataset name can only be CIFAR100 or CIFAR10")
+
+
+    train_loader = torch.utils.data.DataLoader(
+    dataset_train,
+    batch_size=batchsize, shuffle=True)
+
+
+    test_loader = torch.utils.data.DataLoader(
+        dataset_test,
+        batch_size=batchsize, shuffle=False)
+
+    return dataset_train, dataset_test, train_loader, test_loader
+
+
+def create_tinyimagenet(batchsize):
+
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    dataset_train = datasets.ImageFolder('../datasets/tiny-imagenet-200/train', transform=transforms.Compose([
+                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomCrop(32, 4),
+                    transforms.ToTensor(),
+                    normalize,
+                    ]))
+
+    dataset_test =  datasets.ImageFolder('../datasets/tiny-imagenet-200/val', transform=transforms.Compose([
+                    transforms.ToTensor(),
+                    normalize,
+                ]))
+    
+    train_loader = torch.utils.data.DataLoader(
+        dataset_train,
+        batch_size=batchsize, shuffle=True)
+
+    
+    test_loader = torch.utils.data.DataLoader(
+        dataset_test,
+        batch_size=batchsize, shuffle=False)
+
+    return dataset_train, dataset_test, train_loader, test_loader
+
 
 
 def get_hash(paths):
@@ -97,46 +182,7 @@ def seed_worker(worker_id):
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
-def create_cifar(datasetname):
 
-    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-
-    if datasetname == "CIFAR100":
-
-        dataset_train = CIFAR100('../datasets', train=True, transform=transforms.Compose([
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomCrop(32, 4),
-                transforms.Resize((640,640)),
-                transforms.ToTensor(),
-                normalize,
-        ]), download=False)
-
-
-        dataset_valid = CIFAR100('../datasets', train=False, transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Resize((640,640)),
-                normalize,
-        ]))
-
-    
-    elif datasetname == "CIFAR10":
-
-        dataset_train = CIFAR10('../datasets', train=True, transform=transforms.Compose([
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomCrop(32, 4),
-                transforms.Resize((640,640)),
-                transforms.ToTensor(),
-                normalize,
-        ]), download=False)
-
-
-        dataset_valid = CIFAR10('../datasets', train=False, transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Resize((640,640)),
-                normalize,
-        ]))
-
-    return dataset_train, dataset_valid
 
 
 def create_dataloader(path,
