@@ -28,7 +28,6 @@ from utils.general import LOGGER, check_version, check_yaml, make_divisible, pri
 from utils.plots import feature_visualization
 from utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
                                time_sync)
-from vision_toolbox import backbones
 
 try:
     import thop  # for FLOPs computation
@@ -564,19 +563,21 @@ def parse_backbone(d, ch):  # model_dict, input_channels(3)
 
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in (NASConv, Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
-                 BottleneckCSP, C3, C3TR, C3SPP, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x):
+                 BottleneckCSP, C3, NASC3, C3TR, C3SPP, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x):
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
 
             args = [c1, c2, *args[1:]]
 
-            if m in [NASConv]: 
-                args.insert(2,pre_shape)
-
-            if m in [BottleneckCSP, C3, C3TR, C3Ghost, C3x]:
+            if m in [BottleneckCSP, NASC3, C3, C3TR, C3Ghost, C3x]:
                 args.insert(2, n)  # number of repeats
                 n = 1
+
+            if m in [NASConv, NASC3]:
+                args.insert(2,pre_shape)
+                args.insert(3, i)
+        
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
         elif m is Concat:
@@ -609,9 +610,18 @@ def parse_backbone(d, ch):  # model_dict, input_channels(3)
 
         dummy_input = torch.rand(1, c1, pre_shape[0], pre_shape[1])
 
-        if m is NASConv:
+        if m in [NASConv]:
             _, _, t_h, t_w = m_.forward_shape(dummy_input).shape
             pre_shape = (t_h, t_w)
+        elif m in [NASC3]:
+            if n <= 1: 
+                _, _, t_h, t_w = m_.forward_shape(dummy_input).shape
+                pre_shape = (t_h, t_w) 
+            else:
+                #print(n)
+                #for nasc3 in m_:
+                _, _, t_h, t_w = m_[0].forward_shape(dummy_input).shape
+                pre_shape = (t_h, t_w)
         else:
             _, _, t_h, t_w = m_(dummy_input).shape
             pre_shape = (t_h, t_w)

@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 ?? by Ultralytics, GPL-3.0 license
 """
 Dataloaders and dataset utils
 """
@@ -60,7 +60,7 @@ def create_cifar(datasetname, batchsize):
                 transforms.Resize((640,640)),
                 transforms.ToTensor(),
                 normalize,
-        ]), download=False)
+        ]), download=True)
 
 
         dataset_test = CIFAR100('../datasets', train=False, transform=transforms.Compose([
@@ -78,7 +78,7 @@ def create_cifar(datasetname, batchsize):
                 transforms.Resize((640,640)),
                 transforms.ToTensor(),
                 normalize,
-        ]), download=False)
+        ]), download=True)
 
 
         dataset_test = CIFAR10('../datasets', train=False, transform=transforms.Compose([
@@ -113,6 +113,7 @@ def create_tinyimagenet(batchsize):
                     transforms.ToTensor(),
                     normalize,
                     ]))
+    
 
     dataset_test =  datasets.ImageFolder('../datasets/tiny-imagenet-200/val', transform=transforms.Compose([
                     transforms.ToTensor(),
