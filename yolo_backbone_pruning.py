@@ -17,5 +17,4 @@ prune(ori_model=ori_backbone_model, pretrain_backbone=pretrain_backbone, save=sa
 match(ori_model=ori_model, pruned_model=save_prune, save=save_matched_prune)
 
 test_speed(model=torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=False), dummy_input=torch.rand(1,3,640,640), device=device)
-
 test_speed(model=torch.load(save_matched_prune), dummy_input=torch.rand(1,3,640,640), device=device)
