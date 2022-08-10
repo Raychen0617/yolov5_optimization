@@ -13,7 +13,7 @@ save_matched_prune = "./checkpoint/pruned_yolov5s.pt"
 pretrain_backbone=backbones.darknet_yolov5s(pretrained=True)
 device = "cuda:0"
 
-prune(ori_model=ori_backbone_model, pretrain_backbone=pretrain_backbone, save=save_prune, sparsity=0.25)
+prune(ori_model=ori_backbone_model, pretrain_backbone=pretrain_backbone, save=save_prune, sparsity=0.25, method="FPGM")
 match(ori_model=ori_model, pruned_model=save_prune, save=save_matched_prune)
 
 test_speed(model=torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=False), dummy_input=torch.rand(1,3,640,640), device=device)

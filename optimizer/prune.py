@@ -21,7 +21,7 @@ from utils.convert_weight import convert_weights_direct
 from utils.torch_utils import sparsity
 
 
-def prune(ori_model='./models/yolov5sb.yaml', pretrain_backbone=backbones.darknet_yolov5s(pretrained=True), save='./checkpoint/...', sparsity=0.25):
+def prune(ori_model='./models/yolov5sb.yaml', pretrain_backbone=backbones.darknet_yolov5s(pretrained=True), save='./checkpoint/...', sparsity=0.25, method="L1"):
 
     device = torch.device("cuda:0")
     model = BACKBONE(cfg=ori_model, nc=200).to(device=device)
@@ -47,9 +47,16 @@ def prune(ori_model='./models/yolov5sb.yaml', pretrain_backbone=backbones.darkne
     },
     ]
 
-    pruner = L1NormPruner(model, cfg_list)
-    # pruner = L2NormPruner(model, cfg_list)
-    #pruner = FPGMPruner(model, cfg_list)
+    if method == "L1":
+        pruner = L1NormPruner(model, cfg_list)
+    elif method == "L2":
+        pruner = L2NormPruner(model, cfg_list)
+    elif method == "FPGM":
+        pruner = FPGMPruner(model, cfg_list)
+    else:
+        print("Method is not supported !!! (prune.py)")
+        return 
+        
     _, masks = pruner.compress()
     pruner.show_pruned_weights()
     pruner._unwrap_model()
