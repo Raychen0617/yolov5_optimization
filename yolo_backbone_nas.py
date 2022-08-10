@@ -20,6 +20,13 @@ from utils.dataloaders import create_tinyimagenet
 from optimizer.match import match_nas
 
 
+device = torch.device("cuda:0")
+model = NASBACKBONE(cfg="./checkpoint/yolov5sb_nas.yaml", nc=200).to(device=device)
+
+dataset_train, dataset_valid, train_loader, test_loader = create_tinyimagenet(batchsize=1024)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, weight_decay=2e-5)
+criterion = torch.nn.CrossEntropyLoss()
+
 
 def accuracy(output, target, topk=(1,)):
     """ Computes the precision@k for the specified values of k """

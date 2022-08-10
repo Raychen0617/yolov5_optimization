@@ -119,7 +119,7 @@ def match(ori_model='./models/yolov5s.yaml', pruned_model="./checkpoint/pruned_y
     yolo.to(device=device)
 
     # load pruned state dict back 
-    yolo.model.load_state_dict(pruned_yolo_layer.state_dict()) #, strict=False)
+    yolo.load_state_dict(pruned_yolo.state_dict() , strict=False)
 
     print("Matching two different models ", yolo(dummy_input)[0].shape == (1, 3, 80, 80, 85))
 
