@@ -68,4 +68,5 @@ class Callbacks:
         assert hook in self._callbacks, f"hook '{hook}' not found in callbacks {self._callbacks}"
 
         for logger in self._callbacks[hook]:
-            logger['callback'](*args, **kwargs)
+            pass
+            #logger['callback'](*args, **kwargs)
