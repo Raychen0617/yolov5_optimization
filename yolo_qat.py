@@ -479,7 +479,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         # you may specify `quantize_target_type='int8'` in the following line.
         # If you need a quantized model with strict symmetric quantization check (with pre-defined zero points),
         # you may specify `strict_symmetric_check=True` in the following line.
-        convert_and_compare(model=model, dummy_input=dummy_input, output_path='./checkpoint/yolov5s_model.tflite')
+        convert_and_compare(model=qat_model, dummy_input=dummy_input, output_path='./checkpoint/yolov5s_model.tflite')
         #converter = TFLiteConverter(qat_model, dummy_input, tflite_path='./checkpoint/yolov5s_model.tflite')
         #converter.convert()
 
