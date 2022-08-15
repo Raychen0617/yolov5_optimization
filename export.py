@@ -72,119 +72,6 @@ from utils.general import (LOGGER, check_dataset, check_img_size, check_requirem
 from utils.torch_utils import select_device
 
 
-def create_checkpoint(epoch, final_epoch, model, optimizer, ema, sparseml_wrapper, **kwargs):
-    pickle = not sparseml_wrapper.qat_active(math.inf if epoch <0 else epoch)  # qat does not support pickled exports
-    ckpt_model = deepcopy(model.module if is_parallel(model) else model).float()
-    yaml = ckpt_model.yaml
-    if not pickle:
-        ckpt_model = ckpt_model.state_dict()
-
-    return {'epoch': epoch,
-            'model': ckpt_model,
-            'optimizer': optimizer.state_dict(),
-            'yaml': yaml,
-            'hyp': model.hyp,
-            **ema.state_dict(pickle),
-            **sparseml_wrapper.state_dict(final_epoch),
-            **kwargs}
-
-def load_checkpoint(
-    type_, 
-    weights, 
-    device, 
-    cfg=None, 
-    hyp=None, 
-    nc=None, 
-    data=None, 
-    dnn=False, 
-    half = False, 
-    recipe=None, 
-    resume=None, 
-    rank=-1,
-    one_shot=False,
-    max_train_steps=-1,
-    ):
-    with torch_distributed_zero_first(rank):
-        # download if not found locally or from sparsezoo if stub
-        weights = attempt_download(weights) or check_download_sparsezoo_weights(weights)
-    ckpt = torch.load(weights[0] if isinstance(weights, list) or isinstance(weights, tuple)
-                      else weights, map_location="cpu")  # load checkpoint
-
-    # temporary fix until SparseML and ZooModels are updated
-    ckpt['checkpoint_recipe'] = ckpt.get('recipe') or ckpt.get('checkpoint_recipe')
-
-    pickled = isinstance(ckpt['model'], nn.Module)
-    train_type = type_ == 'train'
-    ensemble_type = type_ == 'ensemble'
-    val_type = type_ =='val'
-
-    if pickled and ensemble_type:
-        cfg = None
-        if ensemble_type:
-            model = attempt_load(weights, map_location=device) # load ensemble using pickled
-            state_dict = model.state_dict()
-        elif val_type:
-            model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
-            state_dict = model.model.state_dict()
-    else:
-        # load model from config and weights
-        cfg = cfg or (ckpt['yaml'] if 'yaml' in ckpt else None) or \
-              (ckpt['model'].yaml if pickled else None)
-        model = Model(cfg, ch=3, nc=ckpt['nc'] if ('nc' in ckpt and not nc) else nc,
-                      anchors=hyp.get('anchors') if hyp else None).to(device)
-        model_key = 'ema' if (not train_type and 'ema' in ckpt and ckpt['ema']) else 'model'
-        state_dict = ckpt[model_key].float().state_dict() if pickled else ckpt[model_key]
-        if val_type:
-            model = DetectMultiBackend(model=model, device=device, dnn=dnn, data=data, fp16=half)
-
-    # turn gradients for params back on in case they were removed
-    for p in model.parameters():
-        p.requires_grad = True
-
-    # load sparseml recipe for applying pruning and quantization
-    checkpoint_recipe = train_recipe = None
-    if resume:
-        train_recipe, checkpoint_recipe = ckpt.get('train_recipe'), ckpt.get('checkpoint_recipe')
-    elif recipe or ckpt.get('checkpoint_recipe'):
-        train_recipe, checkpoint_recipe = recipe, ckpt.get('checkpoint_recipe')
-
-    sparseml_wrapper = SparseMLWrapper(
-        model.model if val_type else model,
-        checkpoint_recipe,
-        train_recipe,
-        train_mode=train_type,
-        epoch=ckpt['epoch'],
-        one_shot=one_shot,
-        steps_per_epoch=max_train_steps,
-    )
-    exclude_anchors = not ensemble_type and (cfg or hyp.get('anchors')) and not resume
-    loaded = False
-
-    if train_type:
-        # intialize the recipe for training and restore the weights before if no quantized weights
-        quantized_state_dict = any([name.endswith('.zero_point') for name in state_dict.keys()])
-        if not quantized_state_dict:
-            state_dict = load_state_dict(model, state_dict, run_mode=True, exclude_anchors=exclude_anchors)
-            loaded = True
-
-    if not loaded:
-        state_dict = load_state_dict(model, state_dict, run_mode=not ensemble_type, exclude_anchors=exclude_anchors)
-
-    model.float()
-    report = 'Transferred %g/%g items from %s' % (len(state_dict), len(model.state_dict()), weights)
-
-    if val_type:
-        model.model.eval()
-        
-    return model, {
-        'ckpt': ckpt,
-        'state_dict': state_dict,
-        'sparseml_wrapper': sparseml_wrapper,
-        'report': report,
-    }
-
-
-
 def export_formats():
     # YOLOv5 export formats
     x = [
@@ -414,7 +301,7 @@ def export_saved_model(model,
         from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
         from models.tf import TFDetect, TFModel
-
+        print(model)
         LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
         f = str(file).replace('.pt', '_saved_model')
         batch_size, ch, *imgsz = list(im.shape)  # BCHW

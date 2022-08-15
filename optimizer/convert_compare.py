@@ -10,6 +10,8 @@ import numpy as np
 from nni.compression.pytorch import apply_compression_results, ModelSpeedup
 import torch.nn as nn 
 
+from PIL import Image
+import torchvision.transforms as transforms
 
 import tensorflow as tf
 from tinynn.converter import TFLiteConverter
@@ -19,13 +21,23 @@ def convert_and_compare(model, output_path, dummy_input):
 
     device = "cpu"
     output_path = output_path
+
+    # Example image input 
+    image = Image.open('./data/images/bus.jpg')
+    transform = transforms.Compose([
+        transforms.PILToTensor(),
+        transforms.Resize((640,640))
+    ])
+    img_tensor = transform(image)
+    img_tensor = img_tensor.unsqueeze(0).float()
+
     dummy_input = dummy_input
     converter = TFLiteConverter(model, dummy_input, output_path ,preserve_tensors=True, optimize=GraphOptimizer.COMMON_OPTIMIZE)
     converter.convert()
 
     # Flag variable whether you want to compare the output tensors or all the intermediate tensors
     # The suggestion is to use layerwise comparison only when the outputs don't match.
-    layerwise = True
+    layerwise = False
 
     # As for layerwise comparison, we need to pass `experimental_preserve_all_tensors=True`,
     # which requires `tensorflow >= 2.5.0`.
@@ -90,7 +102,7 @@ def convert_and_compare(model, output_path, dummy_input):
 
         # Calculate absolute difference
         diff = np.abs(torch_v - tfl_v)
-
+        print(torch_v, tfl_v)
         diff_mean = np.mean(diff)
         diff_min = np.min(diff)
         diff_max = np.max(diff)
@@ -117,3 +129,5 @@ def convert_and_compare(model, output_path, dummy_input):
             f'Output {n} relative difference min,mean,max: {rel_diff_min},{rel_diff_mean},{rel_diff_max} (error:'
             f' {rel_err_percent:.2f}%)'
         )
+    
+
