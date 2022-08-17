@@ -57,14 +57,21 @@ def fixed_nas(nas_backbone, nas_json):
         elif isinstance(nas_backbone[i], NASC3) :
             nas_backbone[i].cv1.conv = nas_backbone[i].cv1.conv[nasjson["nasconv_{}-1".format(i)]]
             nas_backbone[i].cv2.conv = nas_backbone[i].cv2.conv[nasjson["nasconv_{}-2".format(i)]]
+    
     return nas_backbone
 
 
 # This function construct yolov5 - nas by providing  .json (choice) and .yaml 
-def match_nas(yolo, nas_backbone, nas_json, save):
+def match_nas(yolo, nas_backbone, nas_json, save, fixed=True):
 
     device = torch.device("cpu")
-    nas = fixed_nas(nas_backbone, nas_json)
+    
+    # if need to fix nas backbone 
+    if fixed:
+        nas = fixed_nas(nas_backbone, nas_json)
+    else:
+        nas = nas_backbone
+    
     dummy_input = torch.rand(1, 3, 640, 640)
 
     # store nas layers
@@ -78,12 +85,15 @@ def match_nas(yolo, nas_backbone, nas_json, save):
         if isinstance(model_type, Conv) or isinstance(model_type, NASConv) or isinstance(model_type, NASC3):
             if nas_layer.get(name) is None:
                     print(name, "cannot be found")
+                    # layer 9 ~ 24 not found is normal 
 
-            elif nas_layer[name].conv.kernel_size != model_type.conv.kernel_size  or nas_layer[name].conv.stride != model_type.conv.stride or  nas_layer[name].conv.padding != model_type.conv.padding:
-                #print("*****", name, nas_layer[name])
+            elif nas_layer[name].conv.kernel_size != model_type.conv.kernel_size  or \
+            nas_layer[name].conv.stride != model_type.conv.stride or  nas_layer[name].conv.padding != model_type.conv.padding \
+            or nas_layer[name].conv.in_channels != model_type.conv.in_channels or nas_layer[name].conv.out_channels != model_type.conv.out_channels:
+                print("*****", name, nas_layer[name])
                 model_type.conv = nas_layer[name].conv
                 model_type.bn = nas_layer[name].bn
-    
+
     # retune model size for cspnet concat 
     yolo.model[9].cv1.conv = nn.Conv2d(yolo.model[8].cv3.conv.out_channels, yolo.model[9].cv1.conv.out_channels, kernel_size=(1, 1), stride=(1, 1), bias=False)
     yolo.model[10].conv = nn.Conv2d(yolo.model[9].cv2.conv.out_channels, yolo.model[10].conv.out_channels, kernel_size=(1, 1), stride=(1, 1), bias=False)
