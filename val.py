@@ -202,7 +202,6 @@ def run(
         t2 = time_sync()
         dt[0] += t2 - t1
 
-        # Inference
         out, train_out = model(im) if training else model(im, augment=augment, val=True)  # inference, loss outputs
         dt[1] += time_sync() - t2
 

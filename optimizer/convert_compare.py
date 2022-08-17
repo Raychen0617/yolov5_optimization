@@ -102,7 +102,6 @@ def convert_and_compare(model, output_path, dummy_input):
 
         # Calculate absolute difference
         diff = np.abs(torch_v - tfl_v)
-        print(torch_v, tfl_v)
         diff_mean = np.mean(diff)
         diff_min = np.min(diff)
         diff_max = np.max(diff)

@@ -29,6 +29,7 @@ import torch.nn as nn
 import yaml
 from torch.optim import lr_scheduler
 from tqdm import tqdm
+from quantization.model_qat import Model_qat
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -39,6 +40,7 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 import val  # for end-of-epoch mAP
 from models.experimental import attempt_load
 from models.yolo import Model, Detect
+from models.common import Conv
 from utils.autoanchor import check_anchors
 from utils.autobatch import check_train_batch_size
 from utils.callbacks import Callbacks
@@ -143,7 +145,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         if isinstance(m, Detect):
             m.inplace = False
             m.onnx_dynamic = True
-            m.export = True
+            m.export = False
     
     #amp = check_amp(model)  # check AMP
     
@@ -168,11 +170,19 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     hyp['cls'] *= nc / 80 * 3 / nl  # scale to classes and layers
     hyp['obj'] *= (imgsz / 640) ** 2 * 3 / nl  # scale to image size and layers
     hyp['label_smoothing'] = opt.label_smoothing
-        
 
-    dummy_input = torch.rand(1, 3, 640, 640)
+
+    dummy_input =  torch.rand(1, 3, 640, 640).cuda()  
+
+    # eval model 
+    #quantizer_eval = QATQuantizer(model, dummy_input, work_dir='./quantization', config={'asymmetric': True, 'per_tensor': True, 'rewrite_graph': False})
+    qat_eval_model = deepcopy(model.eval())
+
+    # train model 
     quantizer = QATQuantizer(model, dummy_input, work_dir='./quantization', config={'asymmetric': True, 'per_tensor': True})
     qat_model = quantizer.quantize()
+    #qat_model = Model_qat()
+    #qat_model.load_state_dict(torch.load('./quantization/model_qat.pth'))
     device = "cuda:0"
     qat_model.to(device=device)
 
@@ -197,11 +207,11 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
 
     # EMA
-    ema = ModelEMA(qat_model) if RANK in {-1, 0} else None
+    ema = None
 
     # Resume
     best_fitness, start_epoch = 0.0, 0
-    if pretrained:
+    if False:
         best_fitness, start_epoch, epochs = smart_resume(ckpt, optimizer, ema, weights, epochs, resume)
         del ckpt, csd
 
@@ -217,6 +227,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         LOGGER.info('Using SyncBatchNorm()')
 
     # Trainloader
+
     train_loader, dataset = create_dataloader(train_path,
                                               imgsz,
                                               batch_size // WORLD_SIZE,
@@ -272,6 +283,12 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     qat_model.hyp = hyp  # attach hyperparameters to model
     qat_model.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc  # attach class weights
     qat_model.names = names
+
+    #print(qat_model)
+    #print()
+    #print()
+    
+
 
     # Start training
     t0 = time.time()
@@ -359,8 +376,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 #scaler.update()
                 optimizer.step()
                 optimizer.zero_grad()
-                if ema:
-                    ema.update(qat_model)
+                #if ema:
+                #    ema.update(qat_model)
                 last_opt_step = ni
 
             # Log
@@ -377,18 +394,33 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         # Scheduler
         lr = [x['lr'] for x in optimizer.param_groups]  # for loggers
         scheduler.step()
-        '''
+        
         if RANK in {-1, 0}:
             # mAP
             callbacks.run('on_train_epoch_end', epoch=epoch)
-            ema.update_attr(qat_model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
+            #ema.update_attr(qat_model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
             final_epoch = (epoch + 1 == epochs) or stopper.possible_stop
             if not noval or final_epoch:  # Calculate mAP
+                
+                # Load trained state dict 
+                import re
+                
+                temp_dict = {}
+                for k in qat_eval_model.state_dict():
+                    temp_dict[re.sub('_', '.', k)] = k
+                
+                real_dict = {}
+                for k in qat_model.state_dict():
+                    if temp_dict.get(re.sub('_', '.', k)):
+                        #print(re.sub('_', '.', k))
+                        real_dict[temp_dict[re.sub('_', '.', k)]] = qat_model.state_dict()[k]
+
+                qat_eval_model.load_state_dict(real_dict, strict=False)
                 results, maps, _ = val.run(data_dict,
                                            batch_size=batch_size // WORLD_SIZE * 2,
                                            imgsz=imgsz,
-                                           half=amp,
-                                           model=ema.ema,
+                                           half=False,
+                                           model=qat_eval_model,
                                            single_cls=single_cls,
                                            dataloader=val_loader,
                                            save_dir=save_dir,
@@ -403,15 +435,15 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 best_fitness = fi
             log_vals = list(mloss) + list(results) + lr
             callbacks.run('on_fit_epoch_end', log_vals, epoch, best_fitness, fi)
-
+            '''
             # Save model
             if (not nosave) or (final_epoch and not evolve):  # if save
                 ckpt = {
                     'epoch': epoch,
                     'best_fitness': best_fitness,
                     'model': deepcopy(de_parallel(qat_model)).half(),
-                    'ema': deepcopy(ema.ema).half(),
-                    'updates': ema.updates,
+                    'ema': None,
+                    'updates': None,
                     'optimizer': optimizer.state_dict(),
                     'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None,
                     'opt': vars(opt),
@@ -425,7 +457,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     torch.save(ckpt, w / f'epoch{epoch}.pt')
                 del ckpt
                 callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
-        '''
+            '''
         # EarlyStopping
         if RANK != -1:  # if DDP training
             broadcast_list = [stop if RANK == 0 else None]
@@ -444,7 +476,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 strip_optimizer(f)  # strip optimizers
                 if f is best:
                     LOGGER.info(f'\nValidating {f}...')
-                    results, _, _ = val.run(
+                    results, _, _ = val.qat(
                         data_dict,
                         batch_size=batch_size // WORLD_SIZE * 2,
                         imgsz=imgsz,
@@ -469,6 +501,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     #   ******************           Turn model into quantized one              **************************************8 
 
     with torch.no_grad():
+        
             
         qat_model.cpu()
 
@@ -483,7 +516,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         # you may specify `quantize_target_type='int8'` in the following line.
         # If you need a quantized model with strict symmetric quantization check (with pre-defined zero points),
         # you may specify `strict_symmetric_check=True` in the following line.
-        convert_and_compare(model=qat_model, dummy_input=dummy_input, output_path='./checkpoint/yolov5s_model.tflite')
+        convert_and_compare(model=qat_model, dummy_input=dummy_input.cpu(), output_path='./checkpoint/nas_yolov5s_model.tflite')
         #converter = TFLiteConverter(qat_model, dummy_input, tflite_path='./checkpoint/yolov5s_model.tflite')
         #converter.convert()
 
