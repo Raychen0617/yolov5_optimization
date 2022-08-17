@@ -17,10 +17,56 @@ from export import export_torchscript
 from utils.dataloaders import create_tinyimagenet, create_cifar
 import tqdm
 from vision_toolbox import backbones
-from utils.convert_weight import convert_weights_direct
+
 from utils.torch_utils import sparsity
 
 
+def prune(model, save='./checkpoint/...', sparsity=0.25, method="L1"):
+    
+    device = torch.device("cuda:0")
+
+    for k, m in model.named_modules(): 
+        if isinstance(m, Conv): # assign export-friendly activations
+            if isinstance(m, Detect):
+                m.inplace = False
+                m.onnx_dynamic = False
+
+    imgsz = (64, 64)
+    imgsz *= 2 if len(imgsz) == 1 else 1 # expand
+
+    gs = 32 # grid size (max stride)
+    imgsz = [check_img_size(x, gs) for x in imgsz] # verify img_size are gs-multiples
+    im = torch.zeros(1, 3, *imgsz).to(device) # image size(1,3,320,192) BCHW iDetection
+
+
+    cfg_list = [{
+        'sparsity_per_layer': sparsity,
+        'op_types': ['Conv2d'],
+    },
+    ]
+
+    if method == "L1":
+        pruner = L1NormPruner(model, cfg_list)
+    elif method == "L2":
+        pruner = L2NormPruner(model, cfg_list)
+    elif method == "FPGM":
+        pruner = FPGMPruner(model, cfg_list)
+    else:
+        print("Method is not supported !!! (prune.py)")
+        return 
+        
+    _, masks = pruner.compress()
+    pruner.show_pruned_weights()
+    pruner._unwrap_model()
+
+    m_speedup = ModelSpeedup(model, im, masks_file=masks)
+    m_speedup.speedup_model()
+
+    print("Save at ", save)
+    torch.save(model,save)
+    return model
+
+'''
 def prune(ori_model='./models/yolov5sb.yaml', pretrain_backbone=backbones.darknet_yolov5s(pretrained=True), save='./checkpoint/...', sparsity=0.25, method="L1"):
 
     device = torch.device("cuda:0")
@@ -66,7 +112,7 @@ def prune(ori_model='./models/yolov5sb.yaml', pretrain_backbone=backbones.darkne
 
     print("Save at ", save)
     torch.save(model,save)
-
+'''
 
 if __name__ == '__main__':
     prune()

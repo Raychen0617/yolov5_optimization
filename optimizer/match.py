@@ -98,17 +98,17 @@ def match_nas(yolo, nas_backbone, nas_json, save):
     print("Matching two different models ", yolo(dummy_input)[0].shape == (1, 3, 80, 80, 85))
     torch.save(yolo, save)
     print("Save at ", save)
+    return yolo
 
 
-# This function matches the pruned backbone back to yolov5 
-def match(ori_model='./models/yolov5s.yaml', pruned_model="./checkpoint/pruned_yolov5sb.pt", save="./checkpoint/pruned_yolov5s.pt"):
 
+def match(yolo, pruned_yolo, save):
+    
+    # This function matches pruned yolo with original yolo 
     device = torch.device("cpu")
-    yolo = Model(ori_model).to(device=device)
     dummy_input = torch.rand(1, 3, 640, 640)
-    pruned_yolo = torch.load(pruned_model).to(device=device)
-    pruned_yolo = pruned_yolo.backbone
-
+    #pruned_yolo = torch.load(pruned_model).to(device=device)
+    #pruned_yolo = pruned_yolo.backbone
 
     pruned_yolo_layer = {}
     for name, model_type in pruned_yolo.named_modules():
@@ -143,6 +143,7 @@ def match(ori_model='./models/yolov5s.yaml', pruned_model="./checkpoint/pruned_y
 
     torch.save(yolo, save)
     print("Save at ", save)
+    return yolo
 
 if __name__ == '__main__':
     match_nas()
