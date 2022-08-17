@@ -18,10 +18,10 @@ from torchvision.datasets import CIFAR100
 from torchvision import transforms
 from utils.dataloaders import create_tinyimagenet
 from optimizer.match import match_nas
-
+from models.yolo import Backbone, Model, NASBACKBONE
 
 device = torch.device("cuda:0")
-model = NASBACKBONE(cfg="./checkpoint/yolov5sb_nas.yaml", nc=200).to(device=device)
+model = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)
 
 dataset_train, dataset_valid, train_loader, test_loader = create_tinyimagenet(batchsize=1024)
 optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, weight_decay=2e-5)
@@ -73,10 +73,6 @@ save_output = "./checkpoint/nas_yolov5s.pt"
 device = torch.device("cuda:0")
 model = NASBACKBONE(cfg=nas_model, nc=200).to(device=device)
 
-'''
-print(model)
-print(model.backbone(torch.rand(1,3,640,640).cuda()).shape)
-'''
 # training sets
 dataset_train, dataset_valid, train_loader, test_loader = create_tinyimagenet(batchsize=1024)
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=2e-5)
@@ -93,7 +89,7 @@ trainer = DartsTrainer(model,
                     num_epochs=300,
                     dataset=dataset_train,
                     #dataset_valid=dataset_valid,
-                    batch_size=1024,
+                    batch_size=256,
                     log_frequency=10,
                     unrolled=False)
 trainer.fit()
@@ -102,7 +98,10 @@ trainer.fit()
 final_architecture = trainer.export()
 print('Final architecture:', trainer.export())
 json.dump(trainer.export(), open(save_json , 'w'))
-match_nas(ori_model=ori_model, nas_model=nas_model, nas_json=save_json, save=save_output)
+
+yolo = Model(ori_model).to(device=device)  
+nas_backbone = NASBACKBONE(cfg=nas_model, nc=200).to(device=device).backbone.model
+match_nas(yolo=yolo, nas_backbone=nas_backbone, nas_json=save_json, save=save_output)
 
 
 '''
