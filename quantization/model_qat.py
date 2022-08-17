@@ -5,13 +5,16 @@ import torch.functional
 import torch.nn.functional
 import torch.quantization
 import torch.nn.quantized
+import tinynn
 
 
 class Model_qat(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
+        self.tensor_0 = torch.tensor([[[1.25, 1.625], [2.0, 3.75], [4.125, 2.875]], [[1.875, 3.8125], [3.875, 2.8125], [3.6875, 7.4375]], [[3.625, 2.8125], [4.875, 6.1875], [11.65625, 10.1875]]], dtype=torch.float32)
         self.fake_quant_0 = torch.quantization.QuantStub()
+        self.fake_quant_1 = torch.quantization.QuantStub()
         self.model_0_conv = torch.nn.Conv2d(3, 32, kernel_size=(6, 6), stride=(2, 2), padding=(2, 2), bias=False)
         self.model_0_bn = torch.nn.BatchNorm2d(32, eps=0.001, momentum=0.03, affine=True, track_running_stats=True)
         self.model_0_act = torch.nn.SiLU(inplace=True)
@@ -189,8 +192,8 @@ class Model_qat(torch.nn.Module):
         self.model_23_cv3_bn = torch.nn.BatchNorm2d(512, eps=0.001, momentum=0.03, affine=True, track_running_stats=True)
         self.model_23_cv3_act = torch.nn.SiLU(inplace=True)
         self.model_24_m_0 = torch.nn.Conv2d(128, 255, kernel_size=(1, 1), stride=(1, 1))
-        self.model_24_m_1 = torch.nn.Conv2d(256, 255, kernel_size=(1, 1), stride=(1, 1))
-        self.model_24_m_2 = torch.nn.Conv2d(512, 255, kernel_size=(1, 1), stride=(1, 1))
+        self.fake_quant_2 = torch.quantization.QuantStub()
+        self.fake_quant_3 = torch.quantization.QuantStub()
         self.fake_dequant_0 = torch.quantization.DeQuantStub()
         self.fake_dequant_1 = torch.quantization.DeQuantStub()
         self.fake_dequant_2 = torch.quantization.DeQuantStub()
@@ -218,6 +221,8 @@ class Model_qat(torch.nn.Module):
     def forward(self, input_0_f):
         fake_quant_0 = self.fake_quant_0(input_0_f)
         input_0_f = None
+        fake_quant_1 = self.fake_quant_1(self.tensor_0)
+        tensor_0 = None
         model_0_conv = self.model_0_conv(fake_quant_0)
         fake_quant_0 = None
         model_0_bn = self.model_0_bn(model_0_conv)
@@ -613,37 +618,32 @@ class Model_qat(torch.nn.Module):
         shape_0_f = model_24_m_0.shape
         view_0_f = model_24_m_0.view(shape_0_f[0], 3, 85, shape_0_f[2], shape_0_f[3])
         model_24_m_0 = None
-        shape_0_f = None
         permute_0_f = view_0_f.permute(0, 1, 3, 4, 2)
         view_0_f = None
         contiguous_0_f = permute_0_f.contiguous()
         permute_0_f = None
-        model_24_m_1 = self.model_24_m_1(model_20_cv3_act)
-        model_20_cv3_act = None
-        shape_1_f = model_24_m_1.shape
-        view_1_f = model_24_m_1.view(shape_1_f[0], 3, 85, shape_1_f[2], shape_1_f[3])
-        model_24_m_1 = None
-        shape_1_f = None
-        permute_1_f = view_1_f.permute(0, 1, 3, 4, 2)
-        view_1_f = None
-        contiguous_1_f = permute_1_f.contiguous()
-        permute_1_f = None
-        model_24_m_2 = self.model_24_m_2(model_23_cv3_act)
-        model_23_cv3_act = None
-        shape_2_f = model_24_m_2.shape
-        view_2_f = model_24_m_2.view(shape_2_f[0], 3, 85, shape_2_f[2], shape_2_f[3])
-        model_24_m_2 = None
-        shape_2_f = None
-        permute_2_f = view_2_f.permute(0, 1, 3, 4, 2)
-        view_2_f = None
-        contiguous_2_f = permute_2_f.contiguous()
-        permute_2_f = None
+        getitem_0_f = fake_quant_1[0]
+        device_0_f = getitem_0_f.device
+        getitem_0_f = None
+        getitem_1_f = fake_quant_1[0]
+        fake_quant_1 = None
+        dtype_0_f = getitem_1_f.dtype
+        getitem_1_f = None
+        arange_0_f = torch.arange(shape_0_f[2], device=device_0_f, dtype=dtype_0_f)
+        fake_quant_2 = self.fake_quant_2(arange_0_f)
+        arange_0_f = None
+        arange_1_f = torch.arange(shape_0_f[3], device=device_0_f, dtype=dtype_0_f)
+        shape_0_f = None
+        device_0_f = None
+        dtype_0_f = None
+        fake_quant_3 = self.fake_quant_3(arange_1_f)
+        arange_1_f = None
         fake_dequant_0 = self.fake_dequant_0(contiguous_0_f)
         contiguous_0_f = None
-        fake_dequant_1 = self.fake_dequant_1(contiguous_1_f)
-        contiguous_1_f = None
-        fake_dequant_2 = self.fake_dequant_2(contiguous_2_f)
-        contiguous_2_f = None
+        fake_dequant_1 = self.fake_dequant_1(model_20_cv3_act)
+        model_20_cv3_act = None
+        fake_dequant_2 = self.fake_dequant_2(model_23_cv3_act)
+        model_23_cv3_act = None
         return fake_dequant_0, fake_dequant_1, fake_dequant_2
 
 
