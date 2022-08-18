@@ -8,8 +8,8 @@ Datasets: https://github.com/ultralytics/yolov5/tree/master/data
 Tutorial: https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data
 
 Usage:
-    $ python path/to/train.py --data coco128.yaml --weights yolov5s.pt --img 640  # from pretrained (RECOMMENDED)
-    $ python path/to/train.py --data coco128.yaml --weights '' --cfg yolov5s.yaml --img 640  # from scratch
+    $ python train.py --data coco128.yaml --weights yolov5s.pt --img 640  # from pretrained (RECOMMENDED)
+    $ python train.py --data coco128.yaml --weights '' --cfg yolov5s.yaml --img 640  # from scratch
 """
 
 import argparse
@@ -114,6 +114,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     # Model
     check_suffix(weights, '.pt')  # check weights
     pretrained = weights.endswith('.pt')
+    #if False:
+    pretrained = False
     if pretrained:
         with torch_distributed_zero_first(LOCAL_RANK):
             weights = attempt_download(weights)  # download if not found locally
@@ -129,7 +131,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         LOGGER.info(f'Transferred {len(csd)}/{len(model.state_dict())} items from {weights}')  # report
     else:
         #model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
-        model = torch.load('./checkpoint/nas_yolov5s.pt').cuda()
+        model = torch.load(weights).cuda()
         print(model)
         
     amp = check_amp(model)  # check AMP

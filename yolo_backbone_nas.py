@@ -65,10 +65,10 @@ def metrics_fn(output, target):
 
 
 # training parameters
-save_json = './output/nas_yolov5sb.json'
+save_json = './output/nasv2_yolov5sb.json'
 ori_model='./models/yolov5s.yaml'
 nas_model="./models/yolov5sb_nas.yaml"
-save_output = "./checkpoint/nas_yolov5s.pt"
+save_output = "./checkpoint/nasv2_yolov5s.pt"
 
 device = torch.device("cuda:0")
 model = NASBACKBONE(cfg=nas_model, nc=200).to(device=device)
@@ -80,8 +80,9 @@ criterion = torch.nn.CrossEntropyLoss()
 
 
 # training
-from nni.retiarii.oneshot.pytorch import DartsTrainer
+from nni.retiarii.oneshot.pytorch import DartsTrainer, EnasTrainer
 
+'''
 trainer = DartsTrainer(model,
                     loss=criterion,
                     metrics=metrics_fn,
@@ -93,7 +94,20 @@ trainer = DartsTrainer(model,
                     log_frequency=10,
                     unrolled=False)
 trainer.fit()
+'''
 
+trainer = EnasTrainer(model,
+                        loss=criterion,
+                        metrics=metrics_fn,
+                        reward_function=reward_accuracy,
+                        optimizer=optimizer,
+                        batch_size=256,
+                        num_epochs=500,
+                        dataset=dataset_train,
+                        log_frequency=10)
+                        #ctrl_kwargs=ctrl_kwargs)
+
+trainer.fit()
 # export model
 final_architecture = trainer.export()
 print('Final architecture:', trainer.export())
