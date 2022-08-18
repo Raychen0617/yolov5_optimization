@@ -82,7 +82,7 @@ evaluator = pl.Classification(
     max_epochs=10,
     gpus=1,
 )
-exploration_strategy = strategy.DARTS()
+exploration_strategy = strategy.ENAS()
 
 
 from nni.retiarii.experiment.pytorch import RetiariiExperiment, RetiariiExeConfig
