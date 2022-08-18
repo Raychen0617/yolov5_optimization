@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 ?? by Ultralytics, GPL-3.0 license
 """
 YOLO-specific modules
 
@@ -28,6 +28,7 @@ from utils.general import LOGGER, check_version, check_yaml, make_divisible, pri
 from utils.plots import feature_visualization
 from utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
                                time_sync)
+from nni.retiarii import model_wrapper
 
 try:
     import thop  # for FLOPs computation
@@ -35,7 +36,7 @@ except ImportError:
     thop = None
 
 
-
+@model_wrapper
 class BACKBONE(nn.Module):
 
     def __init__(self, cfg, nc):
@@ -61,7 +62,7 @@ class BACKBONE(nn.Module):
         x = self.head(x)
         return x
 
-
+@model_wrapper
 class NASBACKBONE(nn.Module):
 
     def __init__(self, cfg, nc):
@@ -88,7 +89,7 @@ class NASBACKBONE(nn.Module):
         return x
 
 
-
+@model_wrapper
 class Detect(nn.Module):
     stride = None  # strides computed during build
     onnx_dynamic = False  # ONNX export parameter
@@ -143,7 +144,7 @@ class Detect(nn.Module):
         anchor_grid = (self.anchors[i] * self.stride[i]).view((1, self.na, 1, 1, 2)).expand(shape)
         return grid, anchor_grid
 
-
+@model_wrapper
 class Model(nn.Module):
     # YOLOv5 model
     def __init__(self, cfg='yolov5s.yaml', ch=3, nc=None, anchors=None):  # model, input channels, number of classes
@@ -305,7 +306,7 @@ class Model(nn.Module):
 
 
 
-
+@model_wrapper
 class Backbone(nn.Module):
     # YOLOv5 model
     def __init__(self, cfg='yolov5s.yaml', ch=3, nc=None, anchors=None):  # model, input channels, number of classes
@@ -488,8 +489,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
     layers, save, c2= [], [], ch[-1]  # layers, savelist, ch out, output_im_shape
     for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args
         
-        # 273 ~276 不重要
-        m = eval(m) if isinstance(m, str) else m  # eval strings
+        # 273 ~276 銝?閬?        m = eval(m) if isinstance(m, str) else m  # eval strings
         for j, a in enumerate(args):
             with contextlib.suppress(NameError):
                 args[j] = eval(a) if isinstance(a, str) else a  # eval strings
@@ -555,8 +555,7 @@ def parse_backbone(d, ch):  # model_dict, input_channels(3)
     layers, save, c2, pre_shape= [], [], ch[-1], (640,640)  # layers, savelist, ch out
     for i, (f, n, m, args) in enumerate(d['backbone']):  # from, number, module, args
         
-        # 273 ~276 不重要
-        m = eval(m) if isinstance(m, str) else m  # eval strings
+        # 273 ~276 銝?閬?        m = eval(m) if isinstance(m, str) else m  # eval strings
         for j, a in enumerate(args):
             with contextlib.suppress(NameError):
                 args[j] = eval(a) if isinstance(a, str) else a  # eval strings
