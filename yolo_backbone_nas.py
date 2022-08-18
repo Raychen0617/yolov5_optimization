@@ -95,6 +95,8 @@ trainer = DartsTrainer(model,
                     unrolled=False)
 trainer.fit()
 '''
+print(model)
+exit()
 
 trainer = EnasTrainer(model,
                         loss=criterion,
@@ -102,12 +104,15 @@ trainer = EnasTrainer(model,
                         reward_function=reward_accuracy,
                         optimizer=optimizer,
                         batch_size=256,
-                        num_epochs=500,
+                        num_epochs=1,
                         dataset=dataset_train,
                         log_frequency=10)
                         #ctrl_kwargs=ctrl_kwargs)
 
 trainer.fit()
+final_architecture = trainer.export()
+#print(final_architecture)
+'''
 # export model
 final_architecture = trainer.export()
 print('Final architecture:', trainer.export())
@@ -118,7 +123,6 @@ nas_backbone = NASBACKBONE(cfg=nas_model, nc=200).to(device=device).backbone.mod
 match_nas(yolo=yolo, nas_backbone=nas_backbone, nas_json=save_json, save=save_output)
 
 
-'''
 # v1 darts
 from nni.algorithms.nas.pytorch.darts import DartsTrainer
 trainer = DartsTrainer(model,

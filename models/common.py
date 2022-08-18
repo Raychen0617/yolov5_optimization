@@ -17,7 +17,8 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
-import torch.nn as nn
+#import torch.nn as nn
+import nni.retiarii.nn.pytorch as nn
 import yaml
 from PIL import Image
 from torch.cuda import amp
@@ -97,10 +98,11 @@ class NASC3(nn.Module):
     def __init__(self, c1, c2, inputshape=(), id=0, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
-        self.cv1 = NASConv(c1, c_, inputshape, str(id)+"-1", 1, 1)
-        self.cv2 = NASConv(c1, c_, inputshape, str(id)+"-2", 1, 1)
-        self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.Sequential(*(Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)))
+        scale = nn.ValueChoice([1.0, 1.5, 2.0])
+        self.cv1 = NASConv(c1, round(c_ *  scale), inputshape, str(id)+"-1", 1, 1)
+        self.cv2 = NASConv(c1, round(c_ *  scale), inputshape, str(id)+"-2", 1, 1)
+        self.cv3 = Conv(2 * round(c_ *  scale), c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.Sequential(*(Bottleneck(round(c_ *  scale), round(c_ *  scale), shortcut, g, e=1.0) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
@@ -179,10 +181,10 @@ class Bottleneck(nn.Module):
     # Standard bottleneck
     def __init__(self, c1, c2, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, shortcut, groups, expansion
         super().__init__()
-        c_ = int(c2 * e)  # hidden channels
+        c_ = round(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c_, c2, 3, 1, g=g)
-        self.add = shortcut and c1 == c2
+        self.add = shortcut #and c1 == c2
 
     def forward(self, x):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
@@ -275,7 +277,7 @@ class SPP(nn.Module):
         super().__init__()
         c_ = c1 // 2  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
-        self.cv2 = Conv(c_ * (len(k) + 1), c2, 1, 1)
+        self.cv2 = Conv(c_ *  (len(k) + 1), c2, 1, 1)
         self.m = nn.ModuleList([nn.MaxPool2d(kernel_size=x, stride=1, padding=x // 2) for x in k])
 
     def forward(self, x):
@@ -291,7 +293,7 @@ class SPPF(nn.Module):
         super().__init__()
         c_ = c1 // 2  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
-        self.cv2 = Conv(c_ * 4, c2, 1, 1)
+        self.cv2 = Conv(c_ *  4, c2, 1, 1)
         self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
 
     def forward(self, x):
