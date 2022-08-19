@@ -18,8 +18,8 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
-#import torch.nn as nn
-import nni.retiarii.nn.pytorch as nn
+import torch.nn as nn
+import nni.retiarii.nn.pytorch as nnr
 import yaml
 from PIL import Image
 from torch.cuda import amp
@@ -74,6 +74,7 @@ class Conv(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
+        #print("三小拉", x.shape, self.conv.out_channels)
         x = self.bn(x)
         x = self.act(x)
         return x
@@ -135,7 +136,8 @@ class Bottleneck(nn.Module):
     def __init__(self, c1, c2, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, shortcut, groups, expansion
         super().__init__()
         c_ = round(c2 * e)  # hidden channels
-        scale = nn.ValueChoice([1, 1.5, 2])
+        #scale = nnr.ValueChoice([1, 1.5, 2])
+        scale = 1
         self.cv1 = Conv(c1, round(scale * c_), 1, 1)
         self.cv2 = Conv(round(scale * c_), c2, 3, 1, g=g)
         self.add = shortcut and c1 == c2
@@ -177,23 +179,23 @@ class CrossConv(nn.Module):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
 # NAS Conv block
-class NASConv(nn.Module):
+class NASConv(nnr.Module):
     # Standard convolution
     def __init__(self, c1, c2, inputshape=(), id=0, k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
         super().__init__()
 
-        choice = [nn.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)]
+        choice = [nnr.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)]
         outputshape = conv_2d_output_shape(inputshape, k, s, autopad(k, p))
         for offsetk in (-2 , 2):
                 for offsetpad in range(0 if p is None else -1*p,4):
                     if conv_2d_output_shape(inputshape, k+offsetk , s, autopad(k, p)+offsetpad) == outputshape:
-                        choice.append(nn.Conv2d(c1, c2, k+offsetk, s, autopad(k, p)+offsetpad, groups=g, bias=False))
+                        choice.append(nnr.Conv2d(c1, c2, k+offsetk, s, autopad(k, p)+offsetpad, groups=g, bias=False))
 
         self.conv  = LayerChoice(choice, label="nasconv_{}".format(id))
-        self.shape = nn.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)
-        self.bn = nn.BatchNorm2d(c2)
+        self.shape = nnr.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)
+        self.bn = nnr.BatchNorm2d(c2)
         #self.act = nn.SiLU() if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
-        act_choice = [nn.SiLU(), nn.Identity(), nn.ReLU()]
+        act_choice = [nnr.SiLU(), nnr.Identity(), nnr.ReLU()]
         self.act = LayerChoice(act_choice, label="nasconv_{}_act".format(id))
         
     def forward(self, x):
@@ -210,7 +212,7 @@ class NASConv(nn.Module):
 
 
 # NAS C3 block
-class NASC3(nn.Module):
+class NASC3(nnr.Module):
     # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, inputshape=(), id=0, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
@@ -234,7 +236,7 @@ class NASC3(nn.Module):
         #return self.total.forward_shape(x)
 
 
-class NASC3sub(nn.Module):
+class NASC3sub(nnr.Module):
     
     def __init__(self, c1, c2, inputshape=(), id=0, n=1, shortcut=True, g=1, e=0.5, scale=1):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
@@ -242,7 +244,7 @@ class NASC3sub(nn.Module):
         self.cv1 = NASConv(c1, round(scale * c_), inputshape, str(id)+"-1", 1, 1)
         self.cv2 = NASConv(c1, round(scale * c_), inputshape, str(id)+"-2", 1, 1)
         self.cv3 = Conv(2*round(scale * c_) , c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.Sequential(*(Bottleneck(round(scale * c_) , round(scale * c_) , shortcut, g, e=1.0) for _ in range(n)))
+        self.m = nnr.Sequential(*(Bottleneck(round(scale * c_) , round(scale * c_) , shortcut, g, e=1.0) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))

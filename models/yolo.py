@@ -1,7 +1,6 @@
 # YOLOv5 ?? by Ultralytics, GPL-3.0 license
 """
 YOLO-specific modules
-
 Usage:
     $ python path/to/models/yolo.py --cfg yolov5s.yaml
 """
@@ -211,6 +210,10 @@ class Model(nn.Module):
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
+        
+
+            #print("Inference debugging ....... ", m, len(x))
+
             x = m(x)  # run
             y.append(x if m.i in self.save else None)  # save output
             if visualize:
@@ -543,6 +546,11 @@ def parse_backbone(d, ch):  # model_dict, input_channels(3)
     layers, save, c2, pre_shape= [], [], ch[-1], (640,640)  # layers, savelist, ch out
     for i, (f, n, m, args) in enumerate(d['backbone']):  # from, number, module, args
         
+        if m == "NASConv":
+            m = NASConv
+        elif m == "NASC3":
+            m = NASC3
+        
         # 273 ~276 銝?閬?        m = eval(m) if isinstance(m, str) else m  # eval strings
         for j, a in enumerate(args):
             with contextlib.suppress(NameError):
@@ -551,6 +559,7 @@ def parse_backbone(d, ch):  # model_dict, input_channels(3)
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in (NASConv, Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
                  BottleneckCSP, C3, NASC3, C3TR, C3SPP, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x):
+            
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
@@ -581,6 +590,7 @@ def parse_backbone(d, ch):  # model_dict, input_channels(3)
             c2 = ch[f]
 
         # n: number of current module
+        print(type(m), m is NASConv)
         m_ = nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)  # module
          
         t = str(m)[8:-2].replace('__main__.', '')  # module type

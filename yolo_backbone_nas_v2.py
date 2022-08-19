@@ -1,4 +1,5 @@
 
+from lib2to3.pytree import convert
 import torch
 import torch.nn.functional as F
 import nni.retiarii.nn.pytorch as nn
@@ -11,7 +12,8 @@ from nni.compression.pytorch.speedup import ModelSpeedup
 from utils.general import check_img_size
 from models.yolo import Detect
 from utils.activations import SiLU
-import torch.nn as nn
+#import torch.nn as nn
+import nni.retiarii.nn.pytorch as nn
 from nni.compression.pytorch.utils.counter import count_flops_params
 import time 
 from nni.compression.pytorch.utils import not_safe_to_prune
@@ -79,7 +81,7 @@ evaluator = pl.Classification(
     train_dataloaders=pl.DataLoader(train_dataset, batch_size=512, num_workers=10),
     val_dataloaders=pl.DataLoader(test_dataset, batch_size=512, num_workers=10),
     # Other keyword arguments passed to pytorch_lightning.Trainer.
-    max_epochs=10,
+    max_epochs=1,
     gpus=1,
 )
 exploration_strategy = strategy.ENAS(reward_metric_name='val_acc')
@@ -126,7 +128,7 @@ for model_dict in exp.export_top_models(formatter='dict'):
 
 # Save the model 
 from nni.retiarii import fixed_arch
-save_path = "./checkpoint/enas_nasv2_yolov5s.pt"
+save_path = "./checkpoint/backbone/enas_yolov5sb.pt"
 temp_model = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)
 with fixed_arch(model_dict):
     final_model = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)
@@ -140,3 +142,4 @@ with fixed_arch(model_dict):
 
 exp_config.execution_engine = 'base'
 export_formatter = 'code'
+
