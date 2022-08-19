@@ -470,26 +470,17 @@ class Backbone(nn.Module):
 
 
 
+
+
 def parse_model(d, ch):  # model_dict, input_channels(3)
     LOGGER.info(f"\n{'':>3}{'from':>18}{'n':>3}{'params':>10}  {'module':<40}{'arguments':<30}")
-
-    # nc: number of class
-    # anchors: bounding box width and height 
-    # depth multiple: * # of blocks 
-    # width multiple: * width in layers
-     
     anchors, nc, gd, gw = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple']
     na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors
     no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
 
-    # layers: store each layer module
-    # save: store layers that need to be concat afterwards 
-    # c2: output channels
-    
-    layers, save, c2= [], [], ch[-1]  # layers, savelist, ch out, output_im_shape
+    layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args
-        
-        # 273 ~276 銝?閬?        m = eval(m) if isinstance(m, str) else m  # eval strings
+        m = eval(m) if isinstance(m, str) else m  # eval strings
         for j, a in enumerate(args):
             with contextlib.suppress(NameError):
                 args[j] = eval(a) if isinstance(a, str) else a  # eval strings
@@ -502,11 +493,9 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
                 c2 = make_divisible(c2 * gw, 8)
 
             args = [c1, c2, *args[1:]]
-
             if m in [BottleneckCSP, C3, C3TR, C3Ghost, C3x]:
                 args.insert(2, n)  # number of repeats
                 n = 1
-            
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
         elif m is Concat:
@@ -522,7 +511,6 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         else:
             c2 = ch[f]
 
-        # n: number of current module
         m_ = nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)  # module
         t = str(m)[8:-2].replace('__main__.', '')  # module type
         np = sum(x.numel() for x in m_.parameters())  # number params
