@@ -66,7 +66,7 @@ def test_epoch(model, device, test_loader):
 
 import nni.retiarii.strategy as strategy
 import nni.retiarii.evaluator.pytorch.lightning as pl
-
+from nni.retiarii.evaluator.pytorch.lightning import Classification, Regression, DataLoader
 
 device = torch.device("cuda:0")
 model_space = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)
@@ -76,13 +76,13 @@ from nni.retiarii.evaluator import FunctionalEvaluator
 evaluator = pl.Classification(
     # Need to use `pl.DataLoader` instead of `torch.utils.data.DataLoader` here,
     # or use `nni.trace` to wrap `torch.utils.data.DataLoader`.
-    train_dataloaders=pl.DataLoader(train_dataset, batch_size=256),
-    val_dataloaders=pl.DataLoader(test_dataset, batch_size=256),
+    train_dataloaders=pl.DataLoader(train_dataset, batch_size=512, num_workers=10),
+    val_dataloaders=pl.DataLoader(test_dataset, batch_size=512, num_workers=10),
     # Other keyword arguments passed to pytorch_lightning.Trainer.
     max_epochs=10,
     gpus=1,
 )
-exploration_strategy = strategy.ENAS()
+exploration_strategy = strategy.ENAS(reward_metric_name='val_acc')
 
 
 from nni.retiarii.experiment.pytorch import RetiariiExperiment, RetiariiExeConfig
@@ -126,7 +126,7 @@ for model_dict in exp.export_top_models(formatter='dict'):
 
 # Save the model 
 from nni.retiarii import fixed_arch
-save_path = "./checkpoint/darts_nasv2_yolov5s.pt"
+save_path = "./checkpoint/enas_nasv2_yolov5s.pt"
 temp_model = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)
 with fixed_arch(model_dict):
     final_model = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)
