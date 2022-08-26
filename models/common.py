@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
+import torch.nn as torch_nn
 #import torch.nn as nn
 import nni.retiarii.nn.pytorch as nn
 import yaml
