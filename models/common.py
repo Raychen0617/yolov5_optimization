@@ -87,13 +87,13 @@ class DWConv(Conv):
     def __init__(self, c1, c2, k=1, s=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
         super().__init__(c1, c2, k, s, g=math.gcd(c1, c2), act=act)
 
-@model_wrapper
+
 class DWConvTranspose2d(nn.ConvTranspose2d):
     # Depth-wise transpose convolution class
     def __init__(self, c1, c2, k=1, s=1, p1=0, p2=0):  # ch_in, ch_out, kernel, stride, padding, padding_out
         super().__init__(c1, c2, k, s, p1, p2, groups=math.gcd(c1, c2))
 
-@model_wrapper
+
 class TransformerLayer(nn.Module):
     # Transformer layer https://arxiv.org/abs/2010.11929 (LayerNorm layers removed for better performance)
     def __init__(self, c, num_heads):
@@ -110,7 +110,7 @@ class TransformerLayer(nn.Module):
         x = self.fc2(self.fc1(x)) + x
         return x
 
-@model_wrapper
+
 class TransformerBlock(nn.Module):
     # Vision Transformer https://arxiv.org/abs/2010.11929
     def __init__(self, c1, c2, num_heads, num_layers):
@@ -129,7 +129,7 @@ class TransformerBlock(nn.Module):
         p = x.flatten(2).permute(2, 0, 1)
         return self.tr(p + self.linear(p)).permute(1, 2, 0).reshape(b, self.c2, w, h)
 
-@model_wrapper
+
 class Bottleneck(nn.Module):
     # Standard bottleneck
     def __init__(self, c1, c2, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, shortcut, groups, expansion
@@ -143,7 +143,7 @@ class Bottleneck(nn.Module):
     def forward(self, x):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
-@model_wrapper
+
 class BottleneckCSP(nn.Module):
     # CSP Bottleneck https://github.com/WongKinYiu/CrossStagePartialNetworks
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
@@ -162,7 +162,7 @@ class BottleneckCSP(nn.Module):
         y2 = self.cv2(x)
         return self.cv4(self.act(self.bn(torch.cat((y1, y2), 1))))
 
-@model_wrapper
+
 class CrossConv(nn.Module):
     # Cross Convolution Downsample
     def __init__(self, c1, c2, k=3, s=1, g=1, e=1.0, shortcut=False):
@@ -253,7 +253,7 @@ class NASC3sub(nn.Module):
 
 
 
-@model_wrapper
+
 class C3(nn.Module):
     # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
@@ -267,7 +267,7 @@ class C3(nn.Module):
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
 
-@model_wrapper
+
 class C3x(C3):
     # C3 module with cross-convolutions
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
@@ -275,7 +275,7 @@ class C3x(C3):
         c_ = int(c2 * e)
         self.m = nn.Sequential(*(CrossConv(c_, c_, 3, 1, g, 1.0, shortcut) for _ in range(n)))
 
-@model_wrapper
+
 class C3TR(C3):
     # C3 module with TransformerBlock()
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
@@ -283,7 +283,7 @@ class C3TR(C3):
         c_ = int(c2 * e)
         self.m = TransformerBlock(c_, c_, 4, n)
 
-@model_wrapper
+
 class C3SPP(C3):
     # C3 module with SPP()
     def __init__(self, c1, c2, k=(5, 9, 13), n=1, shortcut=True, g=1, e=0.5):
@@ -291,7 +291,7 @@ class C3SPP(C3):
         c_ = int(c2 * e)
         self.m = SPP(c_, c_, k)
 
-@model_wrapper
+
 class C3Ghost(C3):
     # C3 module with GhostBottleneck()
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
@@ -299,7 +299,7 @@ class C3Ghost(C3):
         c_ = int(c2 * e)  # hidden channels
         self.m = nn.Sequential(*(GhostBottleneck(c_, c_) for _ in range(n)))
 
-@model_wrapper
+
 class SPP(nn.Module):
     # Spatial Pyramid Pooling (SPP) layer https://arxiv.org/abs/1406.4729
     def __init__(self, c1, c2, k=(5, 9, 13)):
@@ -315,7 +315,7 @@ class SPP(nn.Module):
             warnings.simplefilter('ignore')  # suppress torch 1.9.0 max_pool2d() warning
             return self.cv2(torch.cat([x] + [m(x) for m in self.m], 1))
 
-@model_wrapper
+
 class SPPF(nn.Module):
     # Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher
     def __init__(self, c1, c2, k=5):  # equivalent to SPP(k=(5, 9, 13))
@@ -333,7 +333,7 @@ class SPPF(nn.Module):
             y2 = self.m(y1)
             return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
 
-@model_wrapper
+
 class Focus(nn.Module):
     # Focus wh information into c-space
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
@@ -345,7 +345,7 @@ class Focus(nn.Module):
         return self.conv(torch.cat((x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]), 1))
         # return self.conv(self.contract(x))
 
-@model_wrapper
+
 class GhostConv(nn.Module):
     # Ghost Convolution https://github.com/huawei-noah/ghostnet
     def __init__(self, c1, c2, k=1, s=1, g=1, act=True):  # ch_in, ch_out, kernel, stride, groups
@@ -358,7 +358,7 @@ class GhostConv(nn.Module):
         y = self.cv1(x)
         return torch.cat((y, self.cv2(y)), 1)
 
-@model_wrapper
+
 class GhostBottleneck(nn.Module):
     # Ghost Bottleneck https://github.com/huawei-noah/ghostnet
     def __init__(self, c1, c2, k=3, s=1):  # ch_in, ch_out, kernel, stride
@@ -374,7 +374,7 @@ class GhostBottleneck(nn.Module):
     def forward(self, x):
         return self.conv(x) + self.shortcut(x)
 
-@model_wrapper
+
 class Contract(nn.Module):
     # Contract width-height into channels, i.e. x(1,64,80,80) to x(1,256,40,40)
     def __init__(self, gain=2):
@@ -388,7 +388,7 @@ class Contract(nn.Module):
         x = x.permute(0, 3, 5, 1, 2, 4).contiguous()  # x(1,2,2,64,40,40)
         return x.view(b, c * s * s, h // s, w // s)  # x(1,256,40,40)
 
-@model_wrapper
+
 class Expand(nn.Module):
     # Expand channels into width-height, i.e. x(1,64,80,80) to x(1,16,160,160)
     def __init__(self, gain=2):
@@ -402,7 +402,7 @@ class Expand(nn.Module):
         x = x.permute(0, 3, 4, 1, 5, 2).contiguous()  # x(1,16,80,2,80,2)
         return x.view(b, c // s ** 2, h * s, w * s)  # x(1,16,160,160)
 
-@model_wrapper
+
 class Concat(nn.Module):
     # Concatenate a list of tensors along dimension
     def __init__(self, dimension=1):
@@ -412,7 +412,7 @@ class Concat(nn.Module):
     def forward(self, x):
         return torch.cat(x, self.d)
 
-@model_wrapper
+
 class DetectMultiBackend(nn.Module):
     # YOLOv5 MultiBackend class for python inference on various backends
     def __init__(self, weights='yolov5s.pt', device=torch.device('cpu'), dnn=False, data=None, fp16=False, fuse=True):
@@ -655,7 +655,7 @@ class DetectMultiBackend(nn.Module):
             d = yaml.safe_load(f)
         return d['stride'], d['names']  # assign stride, names
 
-@model_wrapper
+
 class AutoShape(nn.Module):
     # YOLOv5 input-robust model wrapper for passing cv2/np/PIL/torch inputs. Includes preprocessing, inference and NMS
     conf = 0.25  # NMS confidence threshold
@@ -855,7 +855,7 @@ class Detections:
         self.print()  # override print(results)
         return ''
 
-@model_wrapper
+
 class Classify(nn.Module):
     # Classification head, i.e. x(b,c1,20,20) to x(b,c2)
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1):  # ch_in, ch_out, kernel, stride, padding, groups

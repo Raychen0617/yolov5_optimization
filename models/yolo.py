@@ -36,7 +36,7 @@ except ImportError:
     thop = None
 
 
-@model_wrapper
+
 class BACKBONE(nn.Module):
 
     def __init__(self, cfg, nc):
@@ -89,7 +89,6 @@ class NASBACKBONE(nn.Module):
         return x
 
 
-@model_wrapper
 class Detect(nn.Module):
     stride = None  # strides computed during build
     onnx_dynamic = False  # ONNX export parameter
@@ -144,7 +143,7 @@ class Detect(nn.Module):
         anchor_grid = (self.anchors[i] * self.stride[i]).view((1, self.na, 1, 1, 2)).expand(shape)
         return grid, anchor_grid
 
-@model_wrapper
+
 class Model(nn.Module):
     # YOLOv5 model
     def __init__(self, cfg='yolov5s.yaml', ch=3, nc=None, anchors=None):  # model, input channels, number of classes
@@ -306,7 +305,7 @@ class Model(nn.Module):
 
 
 
-@model_wrapper
+
 class Backbone(nn.Module):
     # YOLOv5 model
     def __init__(self, cfg='yolov5s.yaml', ch=3, nc=None, anchors=None):  # model, input channels, number of classes
