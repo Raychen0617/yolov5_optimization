@@ -94,7 +94,7 @@ exp_config.execution_engine = 'oneshot'
 
 # The following configurations are useful to control how many trials to run at most / at the same time.
 
-exp_config.max_trial_number = 100   # spawn 4 trials at most
+exp_config.max_trial_number = 1  # spawn 4 trials at most
 exp_config.trial_concurrency = 2  # will run two trials concurrently
 
 # Remember to set the following config if you want to GPU.
@@ -126,7 +126,7 @@ for model_dict in exp.export_top_models(formatter='dict'):
 
 # Save the model 
 from nni.retiarii import fixed_arch
-save_path = "./checkpoint/enas_nasv2_yolov5s.pt"
+save_path = "./checkpoint/enasv2_yolov5s.pt"
 temp_model = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)
 with fixed_arch(model_dict):
     final_model = NASBACKBONE(cfg="./models/yolov5sb_nas.yaml", nc=200).to(device=device)

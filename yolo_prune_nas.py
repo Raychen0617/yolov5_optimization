@@ -9,11 +9,18 @@ from utils.convert_weight import convert_weights_direct
 
 
 
-device = "cuda:0"
-weights = './checkpoint/darts_yolov5s.pt'
+device = "cpu"
+weights = './checkpoint/backbone/enas_yolov5sb.pt'
 nas_backbone = torch.load(weights)
-pruned_nas_backbone = prune(model=nas_backbone, save=None,  sparsity=0.25, method="FPGM")
+#pruned_nas_backbone = prune(model=nas_backbone, save=None,  sparsity=0.25, method="FPGM")
 
 ori_model='./models/yolov5s.yaml'
 yolo = Model(ori_model).to(device=device)  
-nas_pruned = match_nas(yolo=yolo, nas_backbone=nas_backbone, save="./checkpoint/darts_pruned_yolov5s.pt")
+nas_pruned = match_nas(yolo=yolo, nas_backbone=nas_backbone, save="./checkpoint/enas.pt")
+nas_pruned.cuda()
+
+
+# Evaluating two models 
+evaluate_model(model=torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=False), dummy_input=torch.rand(1,3,640,640), device=device,  testspeed=True, testflopsandparams=False)
+print()
+evaluate_model(model=nas_pruned, dummy_input=torch.rand(1,3,640,640), device=device,  testspeed=True, testflopsandparams=False)
