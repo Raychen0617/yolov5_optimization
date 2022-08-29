@@ -1,4 +1,5 @@
 
+from ast import Nonlocal
 import torch
 import torch.nn.functional as F
 import nni.retiarii.nn.pytorch as nn
@@ -8,6 +9,7 @@ import nni.retiarii.strategy as strategy
 import nni.retiarii.evaluator.pytorch.lightning as pl
 import json 
 from optimizer.match import match_nas
+from optimizer.prune import prune
 from nni.retiarii import fixed_arch
 
 device = torch.device("cuda:0")
@@ -17,6 +19,12 @@ save_model_path = "./checkpoint/dartsv2_yolov5s.pt"
 yolo_yaml= "./models/yolov5s.yaml"
 save_json_path = "./output/dartsv2_yolov5s.json"
 nas_backbone_yaml = "./models/yolov5sb_nas.yaml"
+
+# Pruning configs
+to_prune = False
+sparsity = 0.25
+method = "FPGM"
+save_pruned_backbone = None
 ########################    USP    ######################################
 
 
@@ -34,7 +42,7 @@ evaluator = pl.Classification(
     gpus=1,
 )
 
-########################    USP    ######################################
+########################    NAS algorithm   ######################################
 #exploration_strategy = strategy.ENAS(reward_metric_name='val_acc')
 exploration_strategy = strategy.DARTS()
 
@@ -65,6 +73,12 @@ with open(save_json_path, 'w') as fp:
 with fixed_arch(save_json_path):
     backbone = NASBACKBONE(cfg=nas_backbone_yaml, nc=200).to(device=device)
 
+if to_prune:
+    backbone = prune(model=backbone, save=save_pruned_backbone, sparsity=sparsity, method=method)
+
+
 yolo = Model(yolo_yaml).to(device=device) 
 match_nas(yolo, backbone, save_model_path)
+
 print("Success, json file is saved at ", save_json_path,"    pt file is saved at", save_model_path)
+print("You can train the model by runining     --python train.py --weights ", save_model_path, " --data coco.yaml --epochs 101")
