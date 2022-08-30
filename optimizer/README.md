@@ -24,7 +24,10 @@ self.layer = nn.LayerChoice([
 **Tutorial code:** <br><br>
 main: [nas.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/nas.py) <br>
 search space construction: [common.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/common.py)
-
+```python
+class NASC3(nn.Module)   #L181
+class NASConv(nn.Module)    #L214
+```
 
 
 ## Pruning 
