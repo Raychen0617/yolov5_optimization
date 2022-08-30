@@ -21,7 +21,7 @@ self.layer = nn.LayerChoice([
 ])
 ```
 
-**Tutorial code:** <br>
+**Tutorial code:** <br><br>
 main: [nas.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/nas.py) <br>
 search space construction: [common.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/common.py)
 
