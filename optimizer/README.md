@@ -51,11 +51,30 @@ Pruning Algorithm: [optimizer/prune.py](https://github.com/Raychen0617/yolov5_op
 
 ## Knowledge distillation 
 ### Goal 
-To Improve student’s accuracy with the help of our teacher model 
+To Improve student’s accuracy with the help of our teacher model <br>
+Example of Knowledge Distillation 
+```python 
+class SoftTarget(nn.Module):
+	
+	#   Distilling the Knowledge in a Neural Network: https://arxiv.org/pdf/1503.02531.pdf
+        #   The only change for KD from original training is to implement a new loss function 
+	def __init__(self, T):
+		super(SoftTarget, self).__init__()
+		self.T = T
+
+	def forward(self, out_s, out_t):
+		loss = F.kl_div(F.log_softmax(out_s/self.T, dim=1),
+						F.softmax(out_t/self.T, dim=1),
+						reduction='batchmean') * self.T * self.T
+
+		return loss
+```
+Main: [training.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/training.py) Integrated in training.py, specify `--t_weights` to execute KD <br>
+KD Algorithm: [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py)<br> 
 <br>
 
 ## Optimization tools
 [optimizer/convert_compare.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/convert_compare.py) To convert a pytorch model to a tflite model and compare the difference between their outputs<br>
 [optimizer/match.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py) Match backbone (structually changed by NAS or pruning) back to a YOLO model<br>
 [model_evaluation.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/model_evaluation.py): Evaluate the inference time, network parameters and flops of a specific model<br>
-
+[optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py): Calculating the loss between teacher model and student model
