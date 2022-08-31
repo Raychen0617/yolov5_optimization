@@ -50,7 +50,7 @@ Main: [pruning.py](https://github.com/Raychen0617/yolov5_optimization/blob/maste
 Pruning Algorithm: [optimizer/prune.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/prune.py)<br>
 
 ## Knowledge distillation 
-### Goal 
+### Goal:
 To Improve student’s accuracy with the help of our teacher model <br>
 Example of Knowledge Distillation 
 ```python 
