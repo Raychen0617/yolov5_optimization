@@ -76,5 +76,5 @@ KD Algorithm: [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimiza
 ## Optimization tools
 [optimizer/convert_compare.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/convert_compare.py) To convert a pytorch model to a tflite model and compare the difference between their outputs<br>
 [optimizer/match.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py) Match backbone (structually changed by NAS or pruning) back to a YOLO model<br>
-[model_evaluation.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/model_evaluation.py): Evaluate the inference time, network parameters and flops of a specific model<br>
+[optimizer/model_evaluation.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/model_evaluation.py): Evaluate the inference time, network parameters and flops of a specific model<br>
 [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py): Calculating the loss between teacher model and student model
