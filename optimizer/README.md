@@ -80,3 +80,7 @@ KD Algorithm: [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimiza
 [optimizer/match.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py): Match backbone (structually changed by NAS or pruning) back to a YOLO model<br>
 [optimizer/model_evaluation.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/model_evaluation.py): Evaluate the inference time, network parameters and flops of a specific model<br>
 [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py): Calculating the loss between teacher model and student model
+
+## Experiment Results
+![image](https://user-images.githubusercontent.com/46586372/187589064-ec7fc7df-0ca1-44b2-9849-24d28dc3391b.png)
+
