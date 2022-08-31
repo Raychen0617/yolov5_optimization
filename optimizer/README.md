@@ -82,12 +82,16 @@ KD Algorithm: [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimiza
 [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py): Calculating the loss between teacher model and student model
 
 ## Experiment Results
-Experiment Settings: 
-- GPU: 3090 
+
+Environment 
+- GPU: RTX 3090 
 - Pytorch 1.10
-- System: Ubuntu 20.04
-- Train 100 epoch from scratch 
-- Coco dataset
+- Python 3.7
+- OS: Ubuntu 20.04
+
+Experiment Configs
+- Train 100 epoch from scratch for all result  
+- Dataset: Coco 
 
 ![image](https://user-images.githubusercontent.com/46586372/187589064-ec7fc7df-0ca1-44b2-9849-24d28dc3391b.png)
 
