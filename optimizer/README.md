@@ -1,6 +1,6 @@
 # Model Optimization
 
-## NAS 
+## Neural Architecture Search (NAS) 
 
 ### Goal: 
 To automatically search a network architecture that leads to the best accuracy. 
@@ -8,7 +8,7 @@ To automatically search a network architecture that leads to the best accuracy.
 ### Architecture:
 Blocks: residual block , inception block, bottleneck block, etc. <br>
 Layers: convs, pooling, fc, etc.<br>
-Hyperparameters: # of filters, size of kernel, stride, etc.<br>
+Hyperparameters: number of filters, size of kernel, stride, padding, etc.<br>
 
 ### Search space:
 The set containing all the possible architectures <br>
@@ -22,11 +22,12 @@ self.layer = nn.LayerChoice([
 ])
 ```
 
-### YOLOV5 tutorial code: <br>
-YOLO backbone yaml: [yolov5sb.yaml](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml)<br>
+### YOLOv5 tutorial code: <br>
+YOLOv5s backbone yaml: [yolov5sb.yaml](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml)<br>
 Main: [nas.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/nas.py) <br>
 Search space construction: [common.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/common.py)
 ```python
+# models/common.py
 class NASC3(nn.Module):   #L181
 class NASConv(nn.Module):    #L214
 ```
@@ -44,14 +45,14 @@ pruner = L1NormPruner(model, config_list)
 # compress the model and generate the masks
 _, masks = pruner.compress()
 ```
-### YOLOV5 tutorial code: <br>
-YOLO backbone yaml: [yolov5sb.yaml](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml)<br>
+### YOLOv5 tutorial code: <br>
+YOLOv5s backbone yaml: [yolov5sb.yaml](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml)<br>
 Main: [pruning.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/pruning.py) <br>
 Pruning Algorithm: [optimizer/prune.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/prune.py)<br>
 
-## Knowledge distillation 
+## Knowledge distillation (KD)
 ### Goal:
-To Improve student’s accuracy with the help of our teacher model <br>
+To Improve student’s accuracy with the help of a teacher model <br>
 Example of Knowledge Distillation 
 ```python 
 class SoftTarget(nn.Module):
@@ -69,12 +70,13 @@ class SoftTarget(nn.Module):
 
 		return loss
 ```
+### YOLOv5 tutorial code: <br>
 Main: [training.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/training.py) Integrated in training.py, specify `--t_weights` to execute KD <br>
 KD Algorithm: [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py)<br> 
 <br>
 
 ## Optimization tools
-[optimizer/convert_compare.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/convert_compare.py) To convert a pytorch model to a tflite model and compare the difference between their outputs<br>
-[optimizer/match.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py) Match backbone (structually changed by NAS or pruning) back to a YOLO model<br>
+[optimizer/convert_compare.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/convert_compare.py): To convert a pytorch model to a tflite model and compare the difference between their outputs<br>
+[optimizer/match.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py): Match backbone (structually changed by NAS or pruning) back to a YOLO model<br>
 [optimizer/model_evaluation.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/model_evaluation.py): Evaluate the inference time, network parameters and flops of a specific model<br>
 [optimizer/loss.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py): Calculating the loss between teacher model and student model
