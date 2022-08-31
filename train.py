@@ -10,6 +10,9 @@ Tutorial: https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data
 Usage:
     $ python train.py --data coco128.yaml --weights yolov5s.pt --img 640  # from pretrained (RECOMMENDED)
     $ python train.py --data coco128.yaml --weights '' --cfg yolov5s.yaml --img 640  # from scratch
+
+KD Usage: 
+    $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/enasv2_L1_yolov5s.pt" --t_weights "./checkpoint/yolov5m.pt" 
 """
 
 import argparse
@@ -59,6 +62,8 @@ from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_devi
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
+
+from optimizer.loss import compute_distillation_output_loss
 
 
 def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
@@ -135,6 +140,19 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         print(model)
         
     amp = check_amp(model)  # check AMP
+
+    t_weights = opt.t_weights
+    kd = t_weights.endswith('.pt')
+    if kd:
+        print("load t-model from", opt.t_weights)
+        t_model = torch.load(opt.t_weights, map_location=torch.device('cpu'))
+        if t_model.get("model", None) is not None:
+            t_model = t_model["model"]
+        else:
+            print("loading teacher model error !!!!!!!!!!")
+        t_model.to(device)
+        t_model.float()
+        t_model.train()
 
     # Freeze
     freeze = [f'model.{x}.' for x in (freeze if len(freeze) > 1 else range(freeze[0]))]  # layers to freeze
@@ -281,6 +299,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         # dataset.mosaic_border = [b - imgsz, -b]  # height, width borders
 
         mloss = torch.zeros(3, device=device)  # mean losses
+
         if RANK != -1:
             train_loader.sampler.set_epoch(epoch)
         pbar = enumerate(train_loader)
@@ -314,8 +333,14 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
             # Forward
             with torch.cuda.amp.autocast(amp):
-                pred = model(imgs)  # forward
+                pred = model(imgs)  # forward    
                 loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+                
+                if kd: 
+                    t_pred = t_model(imgs)
+                    dloss = compute_distillation_output_loss(pred, t_pred, model, opt.dist_loss, opt.temperature)
+                    loss += dloss
+
                 if RANK != -1:
                     loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
                 if opt.quad:
@@ -482,8 +507,12 @@ def parse_opt(known=False):
     parser.add_argument('--bbox_interval', type=int, default=-1, help='W&B: Set bounding-box image logging interval')
     parser.add_argument('--artifact_alias', type=str, default='latest', help='W&B: Version of dataset artifact to use')
 
-    return parser.parse_known_args()[0] if known else parser.parse_args()
+    # Teacher models 
+    parser.add_argument('--t_weights', type=str, default=None, help='teacher model weights')
+    parser.add_argument('--dist_loss', type=str, default='l2', help='using kl/l2 loss in distillation')
+    parser.add_argument('--temperature', type=int, default=5, help='temperature in distilling training')
 
+    return parser.parse_known_args()[0] if known else parser.parse_args()
 
 def main(opt, callbacks=Callbacks()):
     # Checks
