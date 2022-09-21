@@ -1,0 +1,18 @@
+
+# Pruning 
+### Goal: 
+Aim to remove unimportant channels while minimizing the reconstruction error  <br>
+
+### Ranking algorithm: 
+To rank the importance of every channel (ex: L1, L2, APOz, FPGM, etc.) <br>
+Example of channel pruning, for more details, please refer to [NNI](https://nni.readthedocs.io/en/stable/tutorials/pruning_quick_start_mnist.html)
+```python 
+from nni.compression.pytorch.pruning import L1NormPruner
+pruner = L1NormPruner(model, config_list)
+# compress the model and generate the masks
+_, masks = pruner.compress()
+```
+### YOLOv5 tutorial code: <br>
+YOLOv5s backbone yaml: [yolov5sb.yaml](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml)<br>
+Main: [pruning.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/pruning.py) <br>
+Pruning Algorithm: [optimizer/prune.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/prune.py)<br>
