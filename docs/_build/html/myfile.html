@@ -1,0 +1,216 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>Model Optimization &#8212; yolov5 optimization doc  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="model-optimization">
+<h1>Model Optimization<a class="headerlink" href="#model-optimization" title="Permalink to this heading">¶</a></h1>
+<section id="neural-architecture-search-nas">
+<h2>Neural Architecture Search (NAS)<a class="headerlink" href="#neural-architecture-search-nas" title="Permalink to this heading">¶</a></h2>
+<section id="goal">
+<h3>Goal:<a class="headerlink" href="#goal" title="Permalink to this heading">¶</a></h3>
+<p>To automatically search a network architecture that leads to the best accuracy.</p>
+</section>
+<section id="architecture">
+<h3>Architecture:<a class="headerlink" href="#architecture" title="Permalink to this heading">¶</a></h3>
+<p>Blocks: residual block , inception block, bottleneck block, etc. <br>
+Layers: convs, pooling, fc, etc.<br>
+Hyperparameters: number of filters, size of kernel, stride, padding, etc.<br></p>
+</section>
+<section id="search-space">
+<h3>Search space:<a class="headerlink" href="#search-space" title="Permalink to this heading">¶</a></h3>
+<p>The set containing all the possible architectures <br>
+Example of constructing search space, for more details, please refer to <a class="reference external" href="https://nni.readthedocs.io/en/stable/nas/construct_space.html">NNI</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># import nni.retiarii.nn.pytorch as nn</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerChoice</span><span class="p">([</span>
+    <span class="n">ops</span><span class="o">.</span><span class="n">PoolBN</span><span class="p">(</span><span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">ops</span><span class="o">.</span><span class="n">SepConv</span><span class="p">(</span><span class="n">channels</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Identity</span><span class="p">()</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="yolov5-tutorial-code-br">
+<h3>YOLOv5 tutorial code: <br><a class="headerlink" href="#yolov5-tutorial-code-br" title="Permalink to this heading">¶</a></h3>
+<p>YOLOv5s backbone yaml: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml">yolov5sb.yaml</a><br>
+Main: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/nas.py">nas.py</a> <br>
+Search space construction: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/common.py">common.py</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># models/common.py</span>
+<span class="k">class</span> <span class="nc">NASC3</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>   <span class="c1">#L181</span>
+<span class="k">class</span> <span class="nc">NASConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>    <span class="c1">#L214</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="pruning">
+<h2>Pruning<a class="headerlink" href="#pruning" title="Permalink to this heading">¶</a></h2>
+<section id="id1">
+<h3>Goal:<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<p>Aim to remove unimportant channels while minimizing the reconstruction error  <br></p>
+</section>
+<section id="ranking-algorithm">
+<h3>Ranking algorithm:<a class="headerlink" href="#ranking-algorithm" title="Permalink to this heading">¶</a></h3>
+<p>To rank the importance of every channel (ex: L1, L2, APOz, FPGM, etc.) <br>
+Example of channel pruning, for more details, please refer to <a class="reference external" href="https://nni.readthedocs.io/en/stable/tutorials/pruning_quick_start_mnist.html">NNI</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nni.compression.pytorch.pruning</span> <span class="kn">import</span> <span class="n">L1NormPruner</span>
+<span class="n">pruner</span> <span class="o">=</span> <span class="n">L1NormPruner</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">config_list</span><span class="p">)</span>
+<span class="c1"># compress the model and generate the masks</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">masks</span> <span class="o">=</span> <span class="n">pruner</span><span class="o">.</span><span class="n">compress</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>YOLOv5 tutorial code: <br><a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<p>YOLOv5s backbone yaml: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml">yolov5sb.yaml</a><br>
+Main: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/pruning.py">pruning.py</a> <br>
+Pruning Algorithm: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/prune.py">optimizer/prune.py</a><br></p>
+</section>
+</section>
+<section id="knowledge-distillation-kd">
+<h2>Knowledge distillation (KD)<a class="headerlink" href="#knowledge-distillation-kd" title="Permalink to this heading">¶</a></h2>
+<section id="id3">
+<h3>Goal:<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<p>To Improve student’s accuracy with the help of a teacher model <br>
+Example of Knowledge Distillation</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SoftTarget</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+	
+	<span class="c1">#   Distilling the Knowledge in a Neural Network: https://arxiv.org/pdf/1503.02531.pdf</span>
+        <span class="c1">#   The only change for KD from original training is to implement a new loss function </span>
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+		<span class="nb">super</span><span class="p">(</span><span class="n">SoftTarget</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">T</span> <span class="o">=</span> <span class="n">T</span>
+
+	<span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_s</span><span class="p">,</span> <span class="n">out_t</span><span class="p">):</span>
+		<span class="n">loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">kl_div</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">out_s</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+						<span class="n">F</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">out_t</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+						<span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;batchmean&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span>
+
+		<span class="k">return</span> <span class="n">loss</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3>YOLOv5 tutorial code: <br><a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<p>Main: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/training.py">training.py</a> Integrated in training.py, specify <code class="docutils literal notranslate"><span class="pre">--t_weights</span></code> to execute KD <br>
+KD Algorithm: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py">optimizer/loss.py</a><br>
+<br></p>
+</section>
+</section>
+<section id="optimization-tools">
+<h2>Optimization tools<a class="headerlink" href="#optimization-tools" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/convert_compare.py">optimizer/convert_compare.py</a>: To convert a pytorch model to a tflite model and compare the difference between their outputs<br>
+<a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py">optimizer/match.py</a>: Match backbone (structually changed by NAS or pruning) back to a YOLO model<br>
+<a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/model_evaluation.py">optimizer/model_evaluation.py</a>: Evaluate the inference time, network parameters and flops of a specific model<br>
+<a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/loss.py">optimizer/loss.py</a>: Calculating the loss between teacher model and student model</p>
+</section>
+<section id="experiment-results">
+<h2>Experiment Results<a class="headerlink" href="#experiment-results" title="Permalink to this heading">¶</a></h2>
+<p>Environment</p>
+<ul class="simple">
+<li><p>GPU: RTX 3090</p></li>
+<li><p>Pytorch 1.10</p></li>
+<li><p>Python 3.7</p></li>
+<li><p>OS: Ubuntu 20.04</p></li>
+</ul>
+<p>Experiment Configs</p>
+<ul class="simple">
+<li><p>Train 100 epoch from scratch for all result</p></li>
+<li><p>Dataset: Coco</p></li>
+</ul>
+<p><img alt="image" src="https://user-images.githubusercontent.com/46586372/187589064-ec7fc7df-0ca1-44b2-9849-24d28dc3391b.png" /></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">yolov5 optimization doc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, chentzj.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/myfile.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
