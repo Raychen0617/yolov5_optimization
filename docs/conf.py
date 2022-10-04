@@ -35,7 +35,7 @@ html_theme_options = {
 
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
-    #'base_url': 'https://nni.readthedocs.io/',
+    'base_url': 'https://yolov5-optimization.readthedocs.io/en/latest/',
 
     # Set the color and the accent color
     # Remember to update static/css/material_custom.css when this is updated.

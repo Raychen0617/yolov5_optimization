@@ -223,13 +223,13 @@
   <ul class="md-nav__list" data-md-scrollfix="">
         <li class="md-nav__item"><a href="#nas-overview--page-root" class="md-nav__link">Neural Architecture Search (NAS)</a><nav class="md-nav">
               <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#goal" class="md-nav__link">Goal:</a>
+        <li class="md-nav__item"><a href="#goal" class="md-nav__link">Goal</a>
         </li>
-        <li class="md-nav__item"><a href="#architecture" class="md-nav__link">Architecture:</a>
+        <li class="md-nav__item"><a href="#architecture-options" class="md-nav__link">Architecture Options</a>
         </li>
-        <li class="md-nav__item"><a href="#search-space" class="md-nav__link">Search space:</a>
+        <li class="md-nav__item"><a href="#search-space" class="md-nav__link">Search space</a>
         </li>
-        <li class="md-nav__item"><a href="#yolov5-tutorial-code-br" class="md-nav__link">YOLOv5 tutorial code: <br/></a>
+        <li class="md-nav__item"><a href="#tutorial" class="md-nav__link">Tutorial</a>
         </li></ul>
             </nav>
         </li>
@@ -250,19 +250,19 @@
   <section id="neural-architecture-search-nas">
 <h1 id="nas-overview--page-root">Neural Architecture Search (NAS)<a class="headerlink" href="#nas-overview--page-root" title="Permalink to this heading">¶</a></h1>
 <section id="goal">
-<h2 id="goal">Goal:<a class="headerlink" href="#goal" title="Permalink to this heading">¶</a></h2>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permalink to this heading">¶</a></h2>
 <p>To automatically search a network architecture that leads to the best accuracy.</p>
 </section>
-<section id="architecture">
-<h2 id="architecture">Architecture:<a class="headerlink" href="#architecture" title="Permalink to this heading">¶</a></h2>
+<section id="architecture-options">
+<h2 id="architecture-options">Architecture Options<a class="headerlink" href="#architecture-options" title="Permalink to this heading">¶</a></h2>
 <p>Blocks: residual block , inception block, bottleneck block, etc. <br/>
 Layers: convs, pooling, fc, etc.<br/>
 Hyperparameters: number of filters, size of kernel, stride, padding, etc.<br/></p>
 </section>
 <section id="search-space">
-<h2 id="search-space">Search space:<a class="headerlink" href="#search-space" title="Permalink to this heading">¶</a></h2>
-<p>The set containing all the possible architectures <br/>
-Example of constructing search space, for more details, please refer to <a class="reference external" href="https://nni.readthedocs.io/en/stable/nas/construct_space.html">NNI</a></p>
+<h2 id="search-space">Search space<a class="headerlink" href="#search-space" title="Permalink to this heading">¶</a></h2>
+<p>The set containing all the possible architectures <br/><br/>
+Example of constructing search space</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># import nni.retiarii.nn.pytorch as nn</span>
 <span class="bp">self</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerChoice</span><span class="p">([</span>
     <span class="n">ops</span><span class="o">.</span><span class="n">PoolBN</span><span class="p">(</span><span class="s1">'max'</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
@@ -271,17 +271,12 @@ Example of constructing search space, for more details, please refer to <a class
 <span class="p">])</span>
 </pre></div>
 </div>
+<p>For more details, please refer to <a class="reference external" href="https://nni.readthedocs.io/en/stable/nas/construct_space.html">NNI</a></p>
 </section>
-<section id="yolov5-tutorial-code-br">
-<h2 id="yolov5-tutorial-code-br">YOLOv5 tutorial code: <br/><a class="headerlink" href="#yolov5-tutorial-code-br" title="Permalink to this heading">¶</a></h2>
-<p>YOLOv5s backbone yaml: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml">yolov5sb.yaml</a><br/>
-Main: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/nas.py">nas.py</a> <br/>
-Search space construction: <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/common.py">common.py</a></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># models/common.py</span>
-<span class="k">class</span> <span class="nc">NASC3</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>   <span class="c1">#L181</span>
-<span class="k">class</span> <span class="nc">NASConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>    <span class="c1">#L214</span>
-</pre></div>
-</div>
+<section id="tutorial">
+<h2 id="tutorial">Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference internal" href="oneshot.html"><span class="doc std std-doc">One shot nas on yolov5 backbone</span></a> <br/>
+<a class="reference internal" href="multi-trial.html"><span class="doc std std-doc">Multi-trial nas on yolov5</span></a></p>
 </section>
 </section>
 
