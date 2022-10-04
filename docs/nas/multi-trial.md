@@ -1,4 +1,4 @@
-# Multi-trial detection NAS with efficiency rewards
+# Multi-trial Detection NAS With Efficiency Rewards
 
 
 ## Define NAS Model 
@@ -100,6 +100,8 @@ search_strategy = strategy.Random(dedup=True)  # dedup=False if deduplication is
 
 ### Customize A Model Evaluator
 
+Setup parameters (ex: batch size, epochs) for model 
+
 ```python
 
 def evaluate_model(model_detect):
@@ -116,14 +118,18 @@ def evaluate_model(model_detect):
             hyp = yaml.safe_load(f) 
     WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
     imgsz = 640
-    batch_size = 16
+    batch_size = 64
     single_cls = False
     from utils.general import colorstr
     train_path = "/home/raytjchen/Desktop/code/datasets/coco128/images/train2017"
     gs = 32
     nbs = 64  # nominal batch size
     epochs = 20 # how many epochs to train for a single choice 
+```
 
+Create optimizer and scheduler for Yolov5
+
+```python
     # Optimizer
     accumulate = max(round(nbs / batch_size), 1)  # accumulate loss before optimizing
     hyp['weight_decay'] *= batch_size * accumulate / nbs  # scale weight_decay
@@ -134,7 +140,11 @@ def evaluate_model(model_detect):
     lf = lambda x: (1 - x / epochs) * (1.0 - hyp['lrf']) + hyp['lrf']  # linear
     from torch.optim import lr_scheduler
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)  # plot_lr_scheduler(optimizer, scheduler, epochs)
+```
 
+Create trainloader and dataloader on coco dataset 
+
+```python
     # Create Trainloader
     from utils.dataloaders import create_dataloader
     train_loader, dataset = create_dataloader(train_path,
@@ -168,7 +178,11 @@ def evaluate_model(model_detect):
                                 workers=0,
                                 pad=0.5,
                                 prefix=colorstr('val: '))[0]
+```
 
+Specify Model's attribute 
+
+```python
     # Model attributes
     hyp['obj'] *= (imgsz / 640) ** 2  # scale to image size and layers
     hyp['label_smoothing'] = 0.0
@@ -177,8 +191,10 @@ def evaluate_model(model_detect):
     from utils.general import labels_to_class_weights
     model.class_weights = labels_to_class_weights(dataset.labels, 80).to(device) * 80  # attach class weights
     model.names = "nas_yolov5s"
+```
 
-    # Start training
+Start training 
+```python
 
     nb = len(train_loader)
     nw = max(round(hyp['warmup_epochs'] * nb), 100)
@@ -296,4 +312,4 @@ with open(save_json_path, 'w') as fp:
 ```
 
 ## Full Code On Github
-(hello_nas.py)[https://github.com/Raychen0617/yolov5_optimization/blob/master/hello_nas.py]
+[hello_nas.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/hello_nas.py)

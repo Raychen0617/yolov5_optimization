@@ -34,7 +34,7 @@
   
   
   
-    <title>Multi-trial detection NAS with efficiency rewards &#8212; Yolov5 Optimization   documentation</title>
+    <title>Multi-trial Detection NAS With Efficiency Rewards &#8212; Yolov5 Optimization   documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/material.css" />
   
@@ -100,7 +100,7 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           <span class="md-header-nav__topic">Yolov5 Optimization</span>
-          <span class="md-header-nav__topic"> Multi-trial detection NAS with efficiency rewards </span>
+          <span class="md-header-nav__topic"> Multi-trial Detection NAS With Efficiency Rewards </span>
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
@@ -221,7 +221,7 @@
 <nav class="md-nav md-nav--secondary">
     <label class="md-nav__title" for="__toc">Contents</label>
   <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#nas-multi-trial--page-root" class="md-nav__link">Multi-trial detection NAS with efficiency rewards</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#nas-multi-trial--page-root" class="md-nav__link">Multi-trial Detection NAS With Efficiency Rewards</a><nav class="md-nav">
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#define-nas-model" class="md-nav__link">Define NAS Model</a><nav class="md-nav">
               <ul class="md-nav__list">
@@ -266,7 +266,7 @@
           <article class="md-content__inner md-typeset" role="main">
             
   <section id="multi-trial-detection-nas-with-efficiency-rewards">
-<h1 id="nas-multi-trial--page-root">Multi-trial detection NAS with efficiency rewards<a class="headerlink" href="#nas-multi-trial--page-root" title="Permalink to this heading">¶</a></h1>
+<h1 id="nas-multi-trial--page-root">Multi-trial Detection NAS With Efficiency Rewards<a class="headerlink" href="#nas-multi-trial--page-root" title="Permalink to this heading">¶</a></h1>
 <section id="define-nas-model">
 <h2 id="define-nas-model">Define NAS Model<a class="headerlink" href="#define-nas-model" title="Permalink to this heading">¶</a></h2>
 <p>Defining a model is almost the same as defining a PyTorch. You need to replace the code import torch.nn as nn with import nni.retiarii.nn.pytorch as nn and add <code class="docutils literal notranslate"><span class="pre">@model_wrapper</span></code> at the beginning of the model</p>
@@ -363,6 +363,7 @@
 </section>
 <section id="customize-a-model-evaluator">
 <h3 id="customize-a-model-evaluator">Customize A Model Evaluator<a class="headerlink" href="#customize-a-model-evaluator" title="Permalink to this heading">¶</a></h3>
+<p>Setup parameters (ex: batch size, epochs) for model</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span>
 <span class="k">def</span> <span class="nf">evaluate_model</span><span class="p">(</span><span class="n">model_detect</span><span class="p">):</span>
     
@@ -378,15 +379,17 @@
             <span class="n">hyp</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> 
     <span class="n">WORLD_SIZE</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">'WORLD_SIZE'</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
     <span class="n">imgsz</span> <span class="o">=</span> <span class="mi">640</span>
-    <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">64</span>
     <span class="n">single_cls</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="kn">from</span> <span class="nn">utils.general</span> <span class="kn">import</span> <span class="n">colorstr</span>
     <span class="n">train_path</span> <span class="o">=</span> <span class="s2">"/home/raytjchen/Desktop/code/datasets/coco128/images/train2017"</span>
     <span class="n">gs</span> <span class="o">=</span> <span class="mi">32</span>
     <span class="n">nbs</span> <span class="o">=</span> <span class="mi">64</span>  <span class="c1"># nominal batch size</span>
     <span class="n">epochs</span> <span class="o">=</span> <span class="mi">20</span> <span class="c1"># how many epochs to train for a single choice </span>
-
-    <span class="c1"># Optimizer</span>
+</pre></div>
+</div>
+<p>Create optimizer and scheduler for Yolov5</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># Optimizer</span>
     <span class="n">accumulate</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">nbs</span> <span class="o">/</span> <span class="n">batch_size</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># accumulate loss before optimizing</span>
     <span class="n">hyp</span><span class="p">[</span><span class="s1">'weight_decay'</span><span class="p">]</span> <span class="o">*=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">accumulate</span> <span class="o">/</span> <span class="n">nbs</span>  <span class="c1"># scale weight_decay</span>
     <span class="kn">from</span> <span class="nn">utils.torch_utils</span> <span class="kn">import</span> <span class="n">smart_optimizer</span>
@@ -396,8 +399,10 @@
     <span class="n">lf</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span> <span class="o">/</span> <span class="n">epochs</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">hyp</span><span class="p">[</span><span class="s1">'lrf'</span><span class="p">])</span> <span class="o">+</span> <span class="n">hyp</span><span class="p">[</span><span class="s1">'lrf'</span><span class="p">]</span>  <span class="c1"># linear</span>
     <span class="kn">from</span> <span class="nn">torch.optim</span> <span class="kn">import</span> <span class="n">lr_scheduler</span>
     <span class="n">scheduler</span> <span class="o">=</span> <span class="n">lr_scheduler</span><span class="o">.</span><span class="n">LambdaLR</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">lr_lambda</span><span class="o">=</span><span class="n">lf</span><span class="p">)</span>  <span class="c1"># plot_lr_scheduler(optimizer, scheduler, epochs)</span>
-
-    <span class="c1"># Create Trainloader</span>
+</pre></div>
+</div>
+<p>Create trainloader and dataloader on coco dataset</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># Create Trainloader</span>
     <span class="kn">from</span> <span class="nn">utils.dataloaders</span> <span class="kn">import</span> <span class="n">create_dataloader</span>
     <span class="n">train_loader</span><span class="p">,</span> <span class="n">dataset</span> <span class="o">=</span> <span class="n">create_dataloader</span><span class="p">(</span><span class="n">train_path</span><span class="p">,</span>
                                               <span class="n">imgsz</span><span class="p">,</span>
@@ -430,8 +435,10 @@
                                 <span class="n">workers</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                                 <span class="n">pad</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
                                 <span class="n">prefix</span><span class="o">=</span><span class="n">colorstr</span><span class="p">(</span><span class="s1">'val: '</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
-
-    <span class="c1"># Model attributes</span>
+</pre></div>
+</div>
+<p>Specify Model’s attribute</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># Model attributes</span>
     <span class="n">hyp</span><span class="p">[</span><span class="s1">'obj'</span><span class="p">]</span> <span class="o">*=</span> <span class="p">(</span><span class="n">imgsz</span> <span class="o">/</span> <span class="mi">640</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>  <span class="c1"># scale to image size and layers</span>
     <span class="n">hyp</span><span class="p">[</span><span class="s1">'label_smoothing'</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
     <span class="n">model</span><span class="o">.</span><span class="n">nc</span> <span class="o">=</span> <span class="mi">80</span>  <span class="c1"># attach number of classes to model</span>
@@ -439,9 +446,10 @@
     <span class="kn">from</span> <span class="nn">utils.general</span> <span class="kn">import</span> <span class="n">labels_to_class_weights</span>
     <span class="n">model</span><span class="o">.</span><span class="n">class_weights</span> <span class="o">=</span> <span class="n">labels_to_class_weights</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span> <span class="mi">80</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="mi">80</span>  <span class="c1"># attach class weights</span>
     <span class="n">model</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="s2">"nas_yolov5s"</span>
-
-    <span class="c1"># Start training</span>
-
+</pre></div>
+</div>
+<p>Start training</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>
     <span class="n">nb</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_loader</span><span class="p">)</span>
     <span class="n">nw</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="s1">'warmup_epochs'</span><span class="p">]</span> <span class="o">*</span> <span class="n">nb</span><span class="p">),</span> <span class="mi">100</span><span class="p">)</span>
     <span class="n">last_opt_step</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -561,7 +569,7 @@
 </section>
 <section id="full-code-on-github">
 <h2 id="full-code-on-github">Full Code On Github<a class="headerlink" href="#full-code-on-github" title="Permalink to this heading">¶</a></h2>
-<p>(hello_nas.py)[https://github.com/Raychen0617/yolov5_optimization/blob/master/hello_nas.py]</p>
+<p><a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/hello_nas.py">hello_nas.py</a></p>
 </section>
 </section>
 
