@@ -229,23 +229,25 @@
         </li>
         <li class="md-nav__item"><a href="#change-yaml-file" class="md-nav__link">Change Yaml File</a>
         </li>
-        <li class="md-nav__item"><a href="#setup-our-nas-model" class="md-nav__link">Setup our nas model</a>
+        <li class="md-nav__item"><a href="#setup-user-defined-nas-model" class="md-nav__link">Setup User-defined Nas Model</a>
         </li></ul>
             </nav>
         </li>
-        <li class="md-nav__item"><a href="#explore-the-defined-model-space" class="md-nav__link">Explore the Defined Model Space</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#explore-the-defined-model-space" class="md-nav__link">Explore The Defined Model Space</a><nav class="md-nav">
               <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#pick-an-exploration-strategy" class="md-nav__link">Pick an exploration strategy</a>
+        <li class="md-nav__item"><a href="#pick-an-exploration-strategy" class="md-nav__link">Pick An Exploration Strategy</a>
         </li>
-        <li class="md-nav__item"><a href="#customize-a-model-evaluator" class="md-nav__link">Customize a model evaluator</a>
+        <li class="md-nav__item"><a href="#customize-a-model-evaluator" class="md-nav__link">Customize A Model Evaluator</a>
         </li>
-        <li class="md-nav__item"><a href="#create-the-evaluator" class="md-nav__link">Create the evaluator</a>
+        <li class="md-nav__item"><a href="#create-the-evaluator" class="md-nav__link">Create The Evaluator</a>
         </li></ul>
             </nav>
         </li>
-        <li class="md-nav__item"><a href="#launch-an-experiment" class="md-nav__link">Launch an experiment</a>
+        <li class="md-nav__item"><a href="#launch-an-experiment" class="md-nav__link">Launch An Experiment</a>
         </li>
         <li class="md-nav__item"><a href="#export-best-model" class="md-nav__link">Export Best Model</a>
+        </li>
+        <li class="md-nav__item"><a href="#full-code-on-github" class="md-nav__link">Full Code On Github</a>
         </li></ul>
             </nav>
         </li>
@@ -267,10 +269,19 @@
 <h1 id="nas-multi-trial--page-root">Multi-trial detection NAS with efficiency rewards<a class="headerlink" href="#nas-multi-trial--page-root" title="Permalink to this heading">¶</a></h1>
 <section id="define-nas-model">
 <h2 id="define-nas-model">Define NAS Model<a class="headerlink" href="#define-nas-model" title="Permalink to this heading">¶</a></h2>
+<p>Defining a model is almost the same as defining a PyTorch. You need to replace the code import torch.nn as nn with import nni.retiarii.nn.pytorch as nn and add <code class="docutils literal notranslate"><span class="pre">@model_wrapper</span></code> at the beginning of the model</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nni.retiarii</span> <span class="kn">import</span> <span class="n">model_wrapper</span>
+
+<span class="nd">@model_wrapper</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+</pre></div>
+</div>
 <section id="define-changable-modules">
 <h3 id="define-changable-modules">Define Changable Modules<a class="headerlink" href="#define-changable-modules" title="Permalink to this heading">¶</a></h3>
 <p>NASC3 is the variantion of the original CSP block (C3 module), it can adjust the output channel numnbers of cv1 and cv2.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">NASC3</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nni.retiarii.nn.pytorch</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="k">class</span> <span class="nc">NASC3</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
     <span class="c1"># CSP Bottleneck with 3 convolutions</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">inputshape</span><span class="o">=</span><span class="p">(),</span> <span class="nb">id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shortcut</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>  <span class="c1"># ch_in, ch_out, number, shortcut, groups, expansion</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -287,7 +298,9 @@
 </pre></div>
 </div>
 <p>NASConv is the varation of the original Conv module, it can adjust the kernel size and padding of convolutions and choose between different activations.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">NASConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nni.retiarii.nn.pytorch</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="k">class</span> <span class="nc">NASConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
     <span class="c1"># Standard convolution</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">inputshape</span><span class="o">=</span><span class="p">(),</span> <span class="nb">id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">act</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>  <span class="c1"># ch_in, ch_out, kernel, stride, padding, groups</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -328,8 +341,8 @@
 </pre></div>
 </div>
 </section>
-<section id="setup-our-nas-model">
-<h3 id="setup-our-nas-model">Setup our nas model<a class="headerlink" href="#setup-our-nas-model" title="Permalink to this heading">¶</a></h3>
+<section id="setup-user-defined-nas-model">
+<h3 id="setup-user-defined-nas-model">Setup User-defined Nas Model<a class="headerlink" href="#setup-user-defined-nas-model" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="s2">"cuda:0"</span>
 <span class="n">hyp</span> <span class="o">=</span> <span class="s2">"data/hyps/hyp.scratch-low.yaml"</span> <span class="c1"># hyper-parameters in yolov5</span>
 <span class="n">cfg</span><span class="o">=</span><span class="s2">"./models/yolov5s_nas.yaml"</span> <span class="c1"># yaml file</span>
@@ -339,9 +352,9 @@
 </section>
 </section>
 <section id="explore-the-defined-model-space">
-<h2 id="explore-the-defined-model-space">Explore the Defined Model Space<a class="headerlink" href="#explore-the-defined-model-space" title="Permalink to this heading">¶</a></h2>
+<h2 id="explore-the-defined-model-space">Explore The Defined Model Space<a class="headerlink" href="#explore-the-defined-model-space" title="Permalink to this heading">¶</a></h2>
 <section id="pick-an-exploration-strategy">
-<h3 id="pick-an-exploration-strategy">Pick an exploration strategy<a class="headerlink" href="#pick-an-exploration-strategy" title="Permalink to this heading">¶</a></h3>
+<h3 id="pick-an-exploration-strategy">Pick An Exploration Strategy<a class="headerlink" href="#pick-an-exploration-strategy" title="Permalink to this heading">¶</a></h3>
 <p>NNI supports many <a class="reference external" href="https://nni.readthedocs.io/en/stable/nas/exploration_strategy.html">exploration startegies</a>, simply choosing (i.e., instantiate) an exploration strategy as below.<br/></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nni.retiarii.strategy</span> <span class="k">as</span> <span class="nn">strategy</span>
 <span class="n">search_strategy</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="n">dedup</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># dedup=False if deduplication is not wanted</span>
@@ -349,7 +362,7 @@
 </div>
 </section>
 <section id="customize-a-model-evaluator">
-<h3 id="customize-a-model-evaluator">Customize a model evaluator<a class="headerlink" href="#customize-a-model-evaluator" title="Permalink to this heading">¶</a></h3>
+<h3 id="customize-a-model-evaluator">Customize A Model Evaluator<a class="headerlink" href="#customize-a-model-evaluator" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span>
 <span class="k">def</span> <span class="nf">evaluate_model</span><span class="p">(</span><span class="n">model_detect</span><span class="p">):</span>
     
@@ -502,7 +515,7 @@
 </div>
 </section>
 <section id="create-the-evaluator">
-<h3 id="create-the-evaluator">Create the evaluator<a class="headerlink" href="#create-the-evaluator" title="Permalink to this heading">¶</a></h3>
+<h3 id="create-the-evaluator">Create The Evaluator<a class="headerlink" href="#create-the-evaluator" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fmrom</span> <span class="n">nni</span><span class="o">.</span><span class="n">retiarii</span><span class="o">.</span><span class="n">evaluator</span> <span class="kn">import</span> <span class="nn">FunctionalEvaluator</span>
 <span class="n">evaluator</span> <span class="o">=</span> <span class="n">FunctionalEvaluator</span><span class="p">(</span><span class="n">evaluate_model</span><span class="p">)</span>
 </pre></div>
@@ -510,7 +523,7 @@
 </section>
 </section>
 <section id="launch-an-experiment">
-<h2 id="launch-an-experiment">Launch an experiment<a class="headerlink" href="#launch-an-experiment" title="Permalink to this heading">¶</a></h2>
+<h2 id="launch-an-experiment">Launch An Experiment<a class="headerlink" href="#launch-an-experiment" title="Permalink to this heading">¶</a></h2>
 <p>After all the above are prepared, it is time to start an experiment to do the model search. An example is shown below.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nni.retiarii.evaluator</span> <span class="kn">import</span> <span class="n">FunctionalEvaluator</span>
 <span class="n">evaluator</span> <span class="o">=</span> <span class="n">FunctionalEvaluator</span><span class="p">(</span><span class="n">evaluate_model</span><span class="p">)</span>
@@ -545,6 +558,10 @@
     <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model_dict</span><span class="p">,</span> <span class="n">fp</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="full-code-on-github">
+<h2 id="full-code-on-github">Full Code On Github<a class="headerlink" href="#full-code-on-github" title="Permalink to this heading">¶</a></h2>
+<p>(hello_nas.py)[https://github.com/Raychen0617/yolov5_optimization/blob/master/hello_nas.py]</p>
 </section>
 </section>
 

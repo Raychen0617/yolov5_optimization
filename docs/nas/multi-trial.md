@@ -2,12 +2,21 @@
 
 
 ## Define NAS Model 
+Defining a model is almost the same as defining a PyTorch. You need to replace the code import torch.nn as nn with import nni.retiarii.nn.pytorch as nn and add `@model_wrapper` at the beginning of the model 
 
+```python
+from nni.retiarii import model_wrapper
+
+@model_wrapper
+class Model(nn.Module):
+```
 
 ### Define Changable Modules
 
 NASC3 is the variantion of the original CSP block (C3 module), it can adjust the output channel numnbers of cv1 and cv2. 
 ```python
+import nni.retiarii.nn.pytorch as nn
+
 class NASC3(nn.Module):
     # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, inputshape=(), id=0, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
@@ -27,6 +36,8 @@ class NASC3(nn.Module):
 NASConv is the varation of the original Conv module, it can adjust the kernel size and padding of convolutions and choose between different activations. 
 
 ```python
+import nni.retiarii.nn.pytorch as nn
+
 class NASConv(nn.Module):
     # Standard convolution
     def __init__(self, c1, c2, inputshape=(), id=0, k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
@@ -67,7 +78,7 @@ backbone:
   ]
 ```
 
-### Setup our nas model 
+### Setup User-defined Nas Model 
 ```python
 device = "cuda:0"
 hyp = "data/hyps/hyp.scratch-low.yaml" # hyper-parameters in yolov5
@@ -75,10 +86,10 @@ cfg="./models/yolov5s_nas.yaml" # yaml file
 model_space = Model(cfg=cfg, ch=3, nc=80, anchors=hyp.get('anchors')).to(device)
 ```
 
-## Explore the Defined Model Space
+## Explore The Defined Model Space
 
 
-### Pick an exploration strategy
+### Pick An Exploration Strategy
 
 NNI supports many [exploration startegies](https://nni.readthedocs.io/en/stable/nas/exploration_strategy.html), simply choosing (i.e., instantiate) an exploration strategy as below.<br>
 
@@ -87,7 +98,7 @@ import nni.retiarii.strategy as strategy
 search_strategy = strategy.Random(dedup=True)  # dedup=False if deduplication is not wanted
 ```
 
-### Customize a model evaluator
+### Customize A Model Evaluator
 
 ```python
 
@@ -240,13 +251,13 @@ def evaluate_model(model_detect):
     nni.report_final_result(results[3] * 1000)
 ```
 
-### Create the evaluator 
+### Create The Evaluator 
 ```python
 fmrom nni.retiarii.evaluator import FunctionalEvaluator
 evaluator = FunctionalEvaluator(evaluate_model)
 ```
 
-## Launch an experiment 
+## Launch An Experiment 
 
 After all the above are prepared, it is time to start an experiment to do the model search. An example is shown below.
 
@@ -283,3 +294,6 @@ save_json_path = "./yolov5s_nas.json"
 with open(save_json_path, 'w') as fp:
     json.dump(model_dict, fp)
 ```
+
+## Full Code On Github
+(hello_nas.py)[https://github.com/Raychen0617/yolov5_optimization/blob/master/hello_nas.py]

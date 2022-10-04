@@ -229,7 +229,7 @@
         </li>
         <li class="md-nav__item"><a href="#search-space" class="md-nav__link">Search space</a>
         </li>
-        <li class="md-nav__item"><a href="#tutorial" class="md-nav__link">Tutorial</a>
+        <li class="md-nav__item"><a href="#tutorials" class="md-nav__link">Tutorials</a>
         </li></ul>
             </nav>
         </li>
@@ -263,7 +263,10 @@ Hyperparameters: number of filters, size of kernel, stride, padding, etc.<br/></
 <h2 id="search-space">Search space<a class="headerlink" href="#search-space" title="Permalink to this heading">¶</a></h2>
 <p>The set containing all the possible architectures <br/><br/>
 Example of constructing search space</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># import nni.retiarii.nn.pytorch as nn</span>
+<blockquote>
+<div><p><strong>Warning</strong>: Need to import nni.retiarii.nn.pytorch as nn to run the following code</p>
+</div></blockquote>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>
 <span class="bp">self</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerChoice</span><span class="p">([</span>
     <span class="n">ops</span><span class="o">.</span><span class="n">PoolBN</span><span class="p">(</span><span class="s1">'max'</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
     <span class="n">ops</span><span class="o">.</span><span class="n">SepConv</span><span class="p">(</span><span class="n">channels</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
@@ -273,9 +276,9 @@ Example of constructing search space</p>
 </div>
 <p>For more details, please refer to <a class="reference external" href="https://nni.readthedocs.io/en/stable/nas/construct_space.html">NNI</a></p>
 </section>
-<section id="tutorial">
-<h2 id="tutorial">Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h2>
-<p><a class="reference internal" href="oneshot.html"><span class="doc std std-doc">One shot nas on yolov5 backbone</span></a> <br/>
+<section id="tutorials">
+<h2 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference internal" href="oneshot.html"><span class="doc std std-doc">One shot nas on yolov5 backbone</span></a> <br/><br/>
 <a class="reference internal" href="multi-trial.html"><span class="doc std std-doc">Multi-trial nas on yolov5</span></a></p>
 </section>
 </section>
