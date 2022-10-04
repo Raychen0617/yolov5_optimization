@@ -47,3 +47,8 @@ def evaluate_model(model, dummy_input, device,  testspeed, testflopsandparams):
     if testspeed: test_speed(model, dummy_input, device)
     if testflopsandparams: test_flops_and_params(model, dummy_input, device)
     #test_size(model, dummy_input)
+
+def test_flops(model, dummy_input, device):
+    from fvcore.nn import FlopCountAnalysis
+    flops = FlopCountAnalysis(model.to(device), dummy_input.to(device))
+    return flops.total()
