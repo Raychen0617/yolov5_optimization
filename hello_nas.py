@@ -44,88 +44,7 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader
 from utils.dataloaders import create_tinyimagenet
-
-'''
-def train_epoch(model, device, train_loader, optimizer, epoch):
-    loss_fn = torch.nn.CrossEntropyLoss()
-    model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-        optimizer.zero_grad()
-        output = model(data)
-        loss = loss_fn(output, target)
-        loss.backward()
-        optimizer.step()
-        if batch_idx % 10 == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
-def test_epoch(model, device, test_loader):
-    model.eval()
-    test_loss = 0
-    correct = 0
-    with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
-
-    test_loss /= len(test_loader.dataset)
-    accuracy = 100. * correct / len(test_loader.dataset)
-
-    print('\nTest set: Accuracy: {}/{} ({:.0f}%)\n'.format(
-          correct, len(test_loader.dataset), accuracy))
-
-    return accuracy
-'''
-
-def train_epoch(model, device, train_loader, optimizer, epoch):
     
-    scaler = torch.cuda.amp.GradScaler(enabled=False)
-    model.train()
-    hyp = "data/hyps/hyp.scratch-low.yaml"
-    if isinstance(hyp, str):
-        with open(hyp, errors='ignore') as f:
-            hyp = yaml.safe_load(f)  # load hyps dict
-
-
-    from utils.loss import NASComputeLoss
-    compute_loss = NASComputeLoss(model=model, h=hyp)
-    nb = len(train_loader)
-    #maps = np.zeros(80)  # mAP per class
-    #results = (0, 0, 0, 0, 0, 0, 0)  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
-    mloss = torch.zeros(3, device=device)
-    optimizer.zero_grad()
-    pbar = enumerate(train_loader)
-    from tqdm import tqdm
-    pbar = tqdm(pbar, total=nb, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
-    last_opt_step = -1
-    
-    for batch_idx, (imgs, targets, paths, _) in pbar:
-
-        ni = batch_idx + nb * epoch  # number integrated batches (since train start)
-        imgs = imgs.to(device, non_blocking=True).float() / 255  # uint8 to float32, 0-255 to 0.0-1.0
-        pred = model(imgs)
-        loss, loss_items = compute_loss(pred, targets.to(device))
-        scaler.scale(loss).backward()
-        
-        # Optimizer
-        if ni - last_opt_step >= accumulate:
-            optimizer.step()
-
-
-        mloss = (mloss * batch_idx + loss_items) / (batch_idx + 1)  # update mean losses
-        mem = f'{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G'  # (GB)
-
-        #pbar.set_description(('%10s' * 2 + '%10.4g' * 5) % (f'{epoch}/{3 - 1}', mem, *mloss, targets.shape[0], imgs.shape[-1]))
-        
-        if batch_idx % 10 == 0:
-          print("box   obj  cls ")
-          print(mloss)
-    
-
-
 def evaluate_model(model_detect):
     
     model = model_detect()
@@ -140,13 +59,13 @@ def evaluate_model(model_detect):
             hyp = yaml.safe_load(f) 
     WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
     imgsz = 640
-    batch_size = 16
+    batch_size = 32
     single_cls = False
     from utils.general import colorstr
-    train_path = "/home/raytjchen/Desktop/code/datasets/coco128/images/train2017"
+    train_path = "/home/raytjchen/Desktop/code/datasets/coco/images/train2017"
     gs = 32
     nbs = 64  # nominal batch size
-    epochs = 20 # how many epochs to train for a single choice 
+    epochs = 4 # how many epochs to train for a single choice 
 
     # Optimizer
     accumulate = max(round(nbs / batch_size), 1)  # accumulate loss before optimizing
@@ -178,7 +97,7 @@ def evaluate_model(model_detect):
                                               shuffle=True)
         
     # Testloader
-    val_path = "/home/raytjchen/Desktop/code/datasets/coco128/images/train2017"
+    val_path = "/home/raytjchen/Desktop/code/datasets/coco/images/val2017"
     val_loader = create_dataloader(
                                 val_path,
                                 imgsz,
@@ -216,10 +135,13 @@ def evaluate_model(model_detect):
     from utils.loss import NASComputeLoss
     compute_loss = NASComputeLoss(model=model, h=hyp)
     
+    import time
+    start_time = time.time()
     for epoch in range(epochs):
         
         model.train()
         mloss = torch.zeros(3, device=device)
+        batches = len(train_loader)
         pbar = enumerate(train_loader)
         from tqdm import tqdm
         pbar = tqdm(pbar, total=nb, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
@@ -244,17 +166,18 @@ def evaluate_model(model_detect):
                 last_opt_step = ni
 
             mloss = (mloss * batch_idx + loss_items) / (batch_idx + 1)  # update mean losses
-            
-            if batch_idx % 10 == 0:
-                print(mloss)
-            
+
+            # Reduce dataset size 
+            if batch_idx >= batches/10: 
+                break
+
             # end batch ------------------------------------------------------------------------------------------------------------------------
         
         # Scheduler step
         scheduler.step()
 
         # Validate
-        data_dict = check_dataset('data/coco128.yaml')
+        data_dict = check_dataset('data/coco.yaml')
         import val as validate
         results, maps, _ = validate.run(data_dict,
                                 batch_size=batch_size // WORLD_SIZE * 2,
@@ -267,13 +190,15 @@ def evaluate_model(model_detect):
                                 plots=False,
                                 #callbacks=callbacks,
                                 compute_loss=compute_loss)
-
-        print("result = ", results[:4])
         nni.report_intermediate_result(int(results[3]) * 1000)
 
     # report final test result
     nni.report_final_result(results[3] * 1000)
-
+    print("---------------------------------------------------------------------------------------------------------------")
+    print(results[ :4])
+    print(results[3] * 1000)
+    print(time.time() - start_time)
+    
 
 # %%
 # Create the evaluator
@@ -302,7 +227,7 @@ exp_config.training_service.use_active_gpu = True
 # %%
 # Launch the experiment. The experiment should take several minutes to finish on a workstation with 2 GPUs.
 
-exp.run(exp_config, 8083)
+exp.run(exp_config, 8085)
 
 
 # Visualize the Experiment
