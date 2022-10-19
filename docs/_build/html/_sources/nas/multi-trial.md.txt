@@ -195,7 +195,8 @@ Specify Model's attribute
 
 Start training 
 ```python
-
+    import time 
+    start_time = time.time()
     nb = len(train_loader)
     nw = max(round(hyp['warmup_epochs'] * nb), 100)
     last_opt_step = -1
@@ -236,10 +237,6 @@ Start training
                 last_opt_step = ni
 
             mloss = (mloss * batch_idx + loss_items) / (batch_idx + 1)  # update mean losses
-            
-            if batch_idx % 10 == 0:
-                print(mloss)
-            
             # end batch ------------------------------------------------------------------------------------------------------------------------
         
         # Scheduler step
@@ -259,14 +256,18 @@ Start training
                                 plots=False,
                                 #callbacks=callbacks,
                                 compute_loss=compute_loss)
-
-        print("result = ", results[:4])
         nni.report_intermediate_result(int(results[3]) * 1000)
 
     # report final test result
-    nni.report_final_result(results[3] * 1000)
+    model_time = start_time - time.time() 
+    nni.report_final_result(results[3] * 1000)    
 ```
-
+**Add efficiency term into our decision function (optional)**
+```python
+    # report final test result
+    alpha = 0.03
+    nni.report_final_result(results[3] * 1000 - model_time * alpha) 
+```
 ### Create The Evaluator 
 ```python
 fmrom nni.retiarii.evaluator import FunctionalEvaluator

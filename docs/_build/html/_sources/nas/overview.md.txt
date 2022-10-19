@@ -24,6 +24,8 @@ self.layer = nn.LayerChoice([
 ```
 For more details, please refer to [NNI](https://nni.readthedocs.io/en/stable/nas/construct_space.html)
 
+## Oneshot vs Multi-trail NAS 
+
 
 ## Tutorials
 

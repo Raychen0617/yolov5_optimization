@@ -34,7 +34,7 @@
   
   
   
-    <title>&lt;no title&gt; &#8212; Yolov5 Optimization   documentation</title>
+    <title>One-Shot NAS on YOLOv5 backbone &#8212; Yolov5 Optimization   documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/material.css" />
   
@@ -100,7 +100,7 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           <span class="md-header-nav__topic">Yolov5 Optimization</span>
-          <span class="md-header-nav__topic"> &lt;no title&gt; </span>
+          <span class="md-header-nav__topic"> One-Shot NAS on YOLOv5 backbone </span>
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
@@ -219,7 +219,50 @@
               <div class="md-sidebar__inner">
                 
 <nav class="md-nav md-nav--secondary">
+    <label class="md-nav__title" for="__toc">Contents</label>
   <ul class="md-nav__list" data-md-scrollfix="">
+        <li class="md-nav__item"><a href="#nas-oneshot--page-root" class="md-nav__link">One-Shot NAS on YOLOv5 backbone</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#define-nas-model" class="md-nav__link">Define NAS Model</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#define-changable-modules" class="md-nav__link">Define Changable Modules</a>
+        </li>
+        <li class="md-nav__item"><a href="#construct-yolov5-backbone-that-supports-nas-componenets-nasc3-nasconv" class="md-nav__link">Construct YOLOv5 backbone that supports NAS componenets (NASC3, NASConv)</a>
+        </li>
+        <li class="md-nav__item"><a href="#wrap-the-nas-backbone-to-a-classification-model-for-training" class="md-nav__link">Wrap the NAS backbone to a classification model for training</a>
+        </li>
+        <li class="md-nav__item"><a href="#change-yaml-file" class="md-nav__link">Change Yaml File</a>
+        </li>
+        <li class="md-nav__item"><a href="#setup-user-defined-nas-model" class="md-nav__link">Setup User-defined Nas Model</a>
+        </li></ul>
+            </nav>
+        </li>
+        <li class="md-nav__item"><a href="#dataset" class="md-nav__link">Dataset</a>
+        </li>
+        <li class="md-nav__item"><a href="#evaluator" class="md-nav__link">Evaluator</a>
+        </li>
+        <li class="md-nav__item"><a href="#startegy" class="md-nav__link">Startegy</a>
+        </li>
+        <li class="md-nav__item"><a href="#experiments" class="md-nav__link">Experiments</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#set-configs" class="md-nav__link">Set configs</a>
+        </li>
+        <li class="md-nav__item"><a href="#launch-experiment" class="md-nav__link">Launch experiment</a>
+        </li></ul>
+            </nav>
+        </li>
+        <li class="md-nav__item"><a href="#get-the-best-usable-model" class="md-nav__link">Get the best usable model</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#export-the-best-backbone-model" class="md-nav__link">Export the best backbone (model)</a>
+        </li>
+        <li class="md-nav__item"><a href="#map-the-backbone-structure-back-to-a-yolo-model" class="md-nav__link">Map the backbone structure back to a YOLO model</a>
+        </li></ul>
+            </nav>
+        </li>
+        <li class="md-nav__item"><a href="#full-code-on-github" class="md-nav__link">Full Code On Github</a>
+        </li></ul>
+            </nav>
+        </li>
     
 <li class="md-nav__item"><a class="md-nav__extra_link" href="../_sources/nas/oneshot.md.txt">Show Source</a> </li>
 
@@ -234,7 +277,238 @@
         <div class="md-content">
           <article class="md-content__inner md-typeset" role="main">
             
-  
+  <section id="one-shot-nas-on-yolov5-backbone">
+<h1 id="nas-oneshot--page-root">One-Shot NAS on YOLOv5 backbone<a class="headerlink" href="#nas-oneshot--page-root" title="Permalink to this heading">¶</a></h1>
+<section id="define-nas-model">
+<h2 id="define-nas-model">Define NAS Model<a class="headerlink" href="#define-nas-model" title="Permalink to this heading">¶</a></h2>
+<p>Defining a model is almost the same as defining a PyTorch. You need to replace the code import torch.nn as nn with import nni.retiarii.nn.pytorch as nn and add <code class="docutils literal notranslate"><span class="pre">@model_wrapper</span></code> at the beginning of the model</p>
+<section id="define-changable-modules">
+<h3 id="define-changable-modules">Define Changable Modules<a class="headerlink" href="#define-changable-modules" title="Permalink to this heading">¶</a></h3>
+<p>NASC3 is the variantion of the original CSP block (C3 module), it can adjust the output channel numnbers of cv1 and cv2.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nni.retiarii.nn.pytorch</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="k">class</span> <span class="nc">NASC3</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="c1"># CSP Bottleneck with 3 convolutions</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">inputshape</span><span class="o">=</span><span class="p">(),</span> <span class="nb">id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shortcut</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>  <span class="c1"># ch_in, ch_out, number, shortcut, groups, expansion</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">c_</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">c2</span> <span class="o">*</span> <span class="n">e</span><span class="p">)</span>  <span class="c1"># changeable output channels</span>
+        <span class="n">choice</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">scale</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]:</span>
+            <span class="n">choice</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NASC3sub</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">inputshape</span><span class="p">,</span> <span class="nb">id</span> <span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">shortcut</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">scale</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="n">LayerChoice</span><span class="p">(</span><span class="n">choice</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"c3_</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv1</span> <span class="o">=</span> <span class="n">Conv</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c_</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv2</span> <span class="o">=</span> <span class="n">Conv</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c_</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv3</span> <span class="o">=</span> <span class="n">Conv</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">c_</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># optional act=FReLU(c2)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">Bottleneck</span><span class="p">(</span><span class="n">c_</span><span class="p">,</span> <span class="n">c_</span><span class="p">,</span> <span class="n">shortcut</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>NASConv is the varation of the original Conv module, it can adjust the kernel size and padding of convolutions and choose between different activations.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nni.retiarii.nn.pytorch</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="k">class</span> <span class="nc">NASConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="c1"># Standard convolution</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">inputshape</span><span class="o">=</span><span class="p">(),</span> <span class="nb">id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">act</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>  <span class="c1"># ch_in, ch_out, kernel, stride, padding, groups</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="n">choice</span> <span class="o">=</span> <span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">autopad</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="n">g</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
+        <span class="c1"># conv_2d_output_shape checks the output shape of convolutions (to make sure output size is the same)</span>
+        <span class="n">outputshape</span> <span class="o">=</span> <span class="n">conv_2d_output_shape</span><span class="p">(</span><span class="n">inputshape</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">autopad</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">offsetk</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">offsetpad</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">p</span><span class="p">,</span><span class="mi">4</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">conv_2d_output_shape</span><span class="p">(</span><span class="n">inputshape</span><span class="p">,</span> <span class="n">k</span><span class="o">+</span><span class="n">offsetk</span> <span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">autopad</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span><span class="o">+</span><span class="n">offsetpad</span><span class="p">)</span> <span class="o">==</span> <span class="n">outputshape</span><span class="p">:</span>
+                        <span class="n">choice</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">k</span><span class="o">+</span><span class="n">offsetk</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">autopad</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span><span class="o">+</span><span class="n">offsetpad</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">g</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv</span>  <span class="o">=</span> <span class="n">LayerChoice</span><span class="p">(</span><span class="n">choice</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"nasconv_</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">autopad</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="n">g</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm2d</span><span class="p">(</span><span class="n">c2</span><span class="p">)</span>
+        <span class="n">act_choice</span> <span class="o">=</span> <span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">SiLU</span><span class="p">(),</span> <span class="n">nn</span><span class="o">.</span><span class="n">Identity</span><span class="p">(),</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">()]</span>  <span class="c1"># activation choices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">act</span> <span class="o">=</span> <span class="n">LayerChoice</span><span class="p">(</span><span class="n">act_choice</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"nasconv_</span><span class="si">{}</span><span class="s2">_act"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+<section id="construct-yolov5-backbone-that-supports-nas-componenets-nasc3-nasconv">
+<h3 id="construct-yolov5-backbone-that-supports-nas-componenets-nasc3-nasconv">Construct YOLOv5 backbone that supports NAS componenets (NASC3, NASConv)<a class="headerlink" href="#construct-yolov5-backbone-that-supports-nas-componenets-nasc3-nasconv" title="Permalink to this heading">¶</a></h3>
+<p><a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolo.py#L359">full_code</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Backbone</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="n">parse_backbone</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">ch</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The function that supports parsing NAS components in backbone
+<a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolo.py#L520">full_code</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">parse_backbone</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">ch</span><span class="p">):</span>  <span class="c1"># model_dict, input_channels(3)</span>
+
+    <span class="n">component_mapping</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"NASConv"</span><span class="p">:</span><span class="n">NASConv</span><span class="p">,</span> <span class="s2">"NASC3"</span><span class="p">:</span><span class="n">NASC3</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s1">'backbone'</span><span class="p">]):</span>  <span class="c1"># from, number, module, args</span>
+        
+        <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">component_mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">component_mapping</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">(</span><span class="n">NASConv</span><span class="p">,</span> <span class="n">Conv</span><span class="p">,</span> <span class="n">GhostConv</span><span class="p">,</span> <span class="n">Bottleneck</span><span class="p">,</span> <span class="n">GhostBottleneck</span><span class="p">,</span> <span class="n">SPP</span><span class="p">,</span> <span class="n">SPPF</span><span class="p">,</span> <span class="n">DWConv</span><span class="p">,</span> <span class="n">MixConv2d</span><span class="p">,</span> <span class="n">Focus</span><span class="p">,</span> <span class="n">CrossConv</span><span class="p">,</span>
+                 <span class="n">BottleneckCSP</span><span class="p">,</span> <span class="n">C3</span><span class="p">,</span> <span class="n">NASC3</span><span class="p">,</span> <span class="n">C3TR</span><span class="p">,</span> <span class="n">C3SPP</span><span class="p">,</span> <span class="n">C3Ghost</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">,</span> <span class="n">DWConvTranspose2d</span><span class="p">,</span> <span class="n">C3x</span><span class="p">):</span>
+            <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">ch</span><span class="p">[</span><span class="n">f</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">c2</span> <span class="o">!=</span> <span class="n">no</span><span class="p">:</span>  <span class="c1"># if not output</span>
+                <span class="n">c2</span> <span class="o">=</span> <span class="n">make_divisible</span><span class="p">(</span><span class="n">c2</span> <span class="o">*</span> <span class="n">gw</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+
+            <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+
+            <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="n">BottleneckCSP</span><span class="p">,</span> <span class="n">NASC3</span><span class="p">,</span> <span class="n">C3</span><span class="p">,</span> <span class="n">C3TR</span><span class="p">,</span> <span class="n">C3Ghost</span><span class="p">,</span> <span class="n">C3x</span><span class="p">]:</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>  <span class="c1"># number of repeats</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="n">NASConv</span><span class="p">,</span> <span class="n">NASC3</span><span class="p">]:</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">pre_shape</span><span class="p">)</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="wrap-the-nas-backbone-to-a-classification-model-for-training">
+<h3 id="wrap-the-nas-backbone-to-a-classification-model-for-training">Wrap the NAS backbone to a classification model for training<a class="headerlink" href="#wrap-the-nas-backbone-to-a-classification-model-for-training" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nni.retiarii</span> <span class="kn">import</span> <span class="n">model_wrapper</span>
+
+<span class="nd">@model_wrapper</span>
+<span class="k">class</span> <span class="nc">NASBACKBONE</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">nc</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backbone</span> <span class="o">=</span> <span class="n">Backbone</span><span class="p">(</span><span class="n">cfg</span><span class="o">=</span><span class="n">cfg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avgpool</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">AdaptiveAvgPool2d</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">cfg</span><span class="p">[</span><span class="n">cfg</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"yolov5"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'x'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">1280</span><span class="p">,</span> <span class="n">nc</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">cfg</span><span class="p">[</span><span class="n">cfg</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"yolov5"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'s'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="n">nc</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">cfg</span><span class="p">[</span><span class="n">cfg</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"yolov5"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'m'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">768</span><span class="p">,</span> <span class="n">nc</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">cfg</span><span class="p">[</span><span class="n">cfg</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"yolov5"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'n'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">nc</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"error loading models in backbone"</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backbone</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avgpool</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+</pre></div>
+</div>
+</section>
+<section id="change-yaml-file">
+<h3 id="change-yaml-file">Change Yaml File<a class="headerlink" href="#change-yaml-file" title="Permalink to this heading">¶</a></h3>
+<p>YoloV5’s backbone NAS yaml <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb_nas.yaml">yolov5sb_nas.yaml</a></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># YOLOv5 v6.0 backbone</span><span class="w"></span>
+<span class="nt">backbone</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="c1"># [from, number, module, args]</span><span class="w"></span>
+<span class="w">  </span><span class="p p-Indicator">[[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASConv</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]],</span><span class="w">  </span><span class="c1"># 0-P1/2</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASConv</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]],</span><span class="w">  </span><span class="c1"># 1-P2/4</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASC3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">128</span><span class="p p-Indicator">]],</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASConv</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">256</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]],</span><span class="w">  </span><span class="c1"># 3-P3/8</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASC3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">256</span><span class="p p-Indicator">]],</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASConv</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">512</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]],</span><span class="w">  </span><span class="c1"># 5-P4/16</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">9</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASC3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">512</span><span class="p p-Indicator">]],</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASConv</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1024</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]],</span><span class="w">  </span><span class="c1"># 7-P5/32</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">NASC3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1024</span><span class="p p-Indicator">]],</span><span class="w"></span>
+<span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">SPPF</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1024</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">]]</span><span class="w"></span>
+<span class="w">  </span><span class="p p-Indicator">]</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="setup-user-defined-nas-model">
+<h3 id="setup-user-defined-nas-model">Setup User-defined Nas Model<a class="headerlink" href="#setup-user-defined-nas-model" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">nas_backbone_yaml</span> <span class="o">=</span> <span class="s2">"./models/yolov5sb_nas.yaml"</span>
+<span class="n">model_space</span> <span class="o">=</span> <span class="n">NASBACKBONE</span><span class="p">(</span><span class="n">cfg</span><span class="o">=</span><span class="n">nas_backbone_yaml</span><span class="p">,</span> <span class="n">nc</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="dataset">
+<h2 id="dataset">Dataset<a class="headerlink" href="#dataset" title="Permalink to this heading">¶</a></h2>
+<p>We use TinyImageNet for our classification training</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">test_dataset</span><span class="p">,</span> <span class="n">train_loader</span><span class="p">,</span> <span class="n">test_loader</span> <span class="o">=</span> <span class="n">create_tinyimagenet</span><span class="p">(</span><span class="n">batchsize</span><span class="o">=</span><span class="mi">1024</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="evaluator">
+<h2 id="evaluator">Evaluator<a class="headerlink" href="#evaluator" title="Permalink to this heading">¶</a></h2>
+<p>To begin exploring the model space, one firstly need to have an evaluator to provide the criterion of a “good model”.  The program is testing on classification tasks, so it can use <code class="docutils literal notranslate"><span class="pre">pl.Classification</span></code> as the evaluator</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nni.retiarii.evaluator.pytorch.lightning</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="n">evaluator</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Classification</span><span class="p">(</span>
+        <span class="c1"># Need to use `pl.DataLoader` instead of `torch.utils.data.DataLoader` here,</span>
+        <span class="c1"># or use `nni.trace` to wrap `torch.utils.data.DataLoader`.</span>
+        <span class="n">train_dataloaders</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+        <span class="n">val_dataloaders</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span><span class="n">test_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+        <span class="c1"># Other keyword arguments passed to pytorch_lightning.Trainer.</span>
+        <span class="n">max_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">gpus</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="startegy">
+<h2 id="startegy">Startegy<a class="headerlink" href="#startegy" title="Permalink to this heading">¶</a></h2>
+<p>In the experiment, we use DARTS and ENAS to explore our model space, for more one-shot strategies, please check out <a class="reference external" href="https://nni.readthedocs.io/en/latest/nas/exploration_strategy.html">here</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">exploration_strategy</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">DARTS</span><span class="p">()</span>
+<span class="n">exploration_strategy</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">ENAS</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="experiments">
+<h2 id="experiments">Experiments<a class="headerlink" href="#experiments" title="Permalink to this heading">¶</a></h2>
+<section id="set-configs">
+<h3 id="set-configs">Set configs<a class="headerlink" href="#set-configs" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nni.retiarii.experiment.pytorch</span> <span class="kn">import</span> <span class="n">RetiariiExperiment</span><span class="p">,</span> <span class="n">RetiariiExeConfig</span>
+<span class="n">exp</span> <span class="o">=</span> <span class="n">RetiariiExperiment</span><span class="p">(</span><span class="n">model_space</span><span class="p">,</span> <span class="n">evaluator</span><span class="p">,</span> <span class="p">[],</span> <span class="n">exploration_strategy</span><span class="p">)</span>
+<span class="n">exp_config</span> <span class="o">=</span> <span class="n">RetiariiExeConfig</span><span class="p">(</span><span class="s1">'local'</span><span class="p">)</span>
+<span class="n">exp_config</span><span class="o">.</span><span class="n">experiment_name</span> <span class="o">=</span> <span class="s1">'darts'</span>
+<span class="n">exp_config</span><span class="o">.</span><span class="n">execution_engine</span> <span class="o">=</span> <span class="s1">'oneshot'</span>
+<span class="n">exp_config</span><span class="o">.</span><span class="n">max_trial_number</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># spawn 4 trials at most</span>
+<span class="n">exp_config</span><span class="o">.</span><span class="n">trial_concurrency</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># will run two trials concurrently</span>
+<span class="n">exp_config</span><span class="o">.</span><span class="n">trial_gpu_number</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">exp_config</span><span class="o">.</span><span class="n">training_service</span><span class="o">.</span><span class="n">use_active_gpu</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+</section>
+<section id="launch-experiment">
+<h3 id="launch-experiment">Launch experiment<a class="headerlink" href="#launch-experiment" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">port</span> <span class="o">=</span> <span class="mi">8081</span>
+<span class="n">exp</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">exp_config</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="get-the-best-usable-model">
+<h2 id="get-the-best-usable-model">Get the best usable model<a class="headerlink" href="#get-the-best-usable-model" title="Permalink to this heading">¶</a></h2>
+<section id="export-the-best-backbone-model">
+<h3 id="export-the-best-backbone-model">Export the best backbone (model)<a class="headerlink" href="#export-the-best-backbone-model" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">model_dict</span> <span class="ow">in</span> <span class="n">exp</span><span class="o">.</span><span class="n">export_top_models</span><span class="p">(</span><span class="n">formatter</span><span class="o">=</span><span class="s1">'dict'</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">model_dict</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">save_json_path</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model_dict</span><span class="p">,</span> <span class="n">fp</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">fixed_arch</span><span class="p">(</span><span class="n">save_json_path</span><span class="p">):</span>
+    <span class="n">backbone</span> <span class="o">=</span> <span class="n">NASBACKBONE</span><span class="p">(</span><span class="n">cfg</span><span class="o">=</span><span class="n">nas_backbone_yaml</span><span class="p">,</span> <span class="n">nc</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="map-the-backbone-structure-back-to-a-yolo-model">
+<h3 id="map-the-backbone-structure-back-to-a-yolo-model">Map the backbone structure back to a YOLO model<a class="headerlink" href="#map-the-backbone-structure-back-to-a-yolo-model" title="Permalink to this heading">¶</a></h3>
+<p>match_nas is a function that maps the backbone structure back and save the final detection model <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py#L47">full_code</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">save_model_path</span> <span class="o">=</span> <span class="s2">"....."</span>
+<span class="n">yolo</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">yolo_yaml</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span> 
+<span class="n">match_nas</span><span class="p">(</span><span class="n">yolo</span><span class="p">,</span> <span class="n">backbone</span><span class="p">,</span> <span class="n">save_model_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="full-code-on-github">
+<h2 id="full-code-on-github">Full Code On Github<a class="headerlink" href="#full-code-on-github" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/oneshot_nas.py">oneshot_nas.py</a></p>
+</section>
+</section>
+
 
           </article>
         </div>

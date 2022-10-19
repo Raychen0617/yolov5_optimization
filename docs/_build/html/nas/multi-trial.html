@@ -449,7 +449,8 @@
 </pre></div>
 </div>
 <p>Start training</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="kn">import</span> <span class="nn">time</span> 
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="n">nb</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_loader</span><span class="p">)</span>
     <span class="n">nw</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="s1">'warmup_epochs'</span><span class="p">]</span> <span class="o">*</span> <span class="n">nb</span><span class="p">),</span> <span class="mi">100</span><span class="p">)</span>
     <span class="n">last_opt_step</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -490,10 +491,6 @@
                 <span class="n">last_opt_step</span> <span class="o">=</span> <span class="n">ni</span>
 
             <span class="n">mloss</span> <span class="o">=</span> <span class="p">(</span><span class="n">mloss</span> <span class="o">*</span> <span class="n">batch_idx</span> <span class="o">+</span> <span class="n">loss_items</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">batch_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># update mean losses</span>
-            
-            <span class="k">if</span> <span class="n">batch_idx</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">mloss</span><span class="p">)</span>
-            
             <span class="c1"># end batch ------------------------------------------------------------------------------------------------------------------------</span>
         
         <span class="c1"># Scheduler step</span>
@@ -513,12 +510,17 @@
                                 <span class="n">plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                                 <span class="c1">#callbacks=callbacks,</span>
                                 <span class="n">compute_loss</span><span class="o">=</span><span class="n">compute_loss</span><span class="p">)</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="s2">"result = "</span><span class="p">,</span> <span class="n">results</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
         <span class="n">nni</span><span class="o">.</span><span class="n">report_intermediate_result</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
 
     <span class="c1"># report final test result</span>
-    <span class="n">nni</span><span class="o">.</span><span class="n">report_final_result</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="n">model_time</span> <span class="o">=</span> <span class="n">start_time</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> 
+    <span class="n">nni</span><span class="o">.</span><span class="n">report_final_result</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>    
+</pre></div>
+</div>
+<p><strong>Add efficiency term into our decision function (optional)</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># report final test result</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.03</span>
+    <span class="n">nni</span><span class="o">.</span><span class="n">report_final_result</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">-</span> <span class="n">model_time</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">)</span> 
 </pre></div>
 </div>
 </section>
