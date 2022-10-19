@@ -154,8 +154,9 @@ def evaluate_model(model_detect):
             imgs = imgs.to(device, non_blocking=True).float() / 255  # uint8 to float32, 0-255 to 0.0-1.0
             pred = model(imgs)
             loss, loss_items = compute_loss(pred, targets.to(device))
-            scaler.scale(loss).backward()
-            
+            #scaler.scale(loss).backward()
+            loss.backward()
+
             # Optimizer step on 
             if ni - last_opt_step >= accumulate:
                 scaler.unscale_(optimizer)  # unscale gradients
@@ -194,9 +195,7 @@ def evaluate_model(model_detect):
 
     # report final test result
     nni.report_final_result(results[3] * 1000)
-    print("---------------------------------------------------------------------------------------------------------------")
     print(results[ :4])
-    print(results[3] * 1000)
     print(time.time() - start_time)
     
 
@@ -214,8 +213,8 @@ exp_config.experiment_name = 'yolov5s_nas_search'
 # %%
 # The following configurations are useful to control how many trials to run at most / at the same time.
 
-exp_config.max_trial_number = 4   # spawn 4 trials at most
-exp_config.trial_concurrency = 1  # will run two trials concurrently 
+exp_config.max_trial_number = 100   # spawn 4 trials at most
+exp_config.trial_concurrency = 2  # will run two trials concurrently 
 
 # %%
 # Remember to set the following config if you want to GPU.
