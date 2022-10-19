@@ -30,7 +30,6 @@ from utils.general import (LOGGER, check_requirements, check_suffix, check_versi
                            make_divisible, non_max_suppression, scale_coords, xywh2xyxy, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import copy_attr, time_sync
-from nni.nas.pytorch import mutables
 from nni.retiarii import model_wrapper, basic_unit
 
 from nni.retiarii.nn.pytorch import LayerChoice, InputChoice
