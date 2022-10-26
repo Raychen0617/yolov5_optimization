@@ -532,7 +532,7 @@ def parse_backbone(d, ch):  # model_dict, input_channels(3)
     # save: store layers that need to be concat afterwards 
     # c2: output channels
     # component_mapping: map NAS componenets
-    component_mapping = {"NASConv":NASConv, "NASC3":NASC3}
+    component_mapping = {"NASConv":NASConv, "NASC3":NASC3, "SPPF":SPPF, "Conv":Conv, "nn.Upsample":nn.Upsample, "Concat":Concat, "C3":C3, "Detect":Detect}
 
     layers, save, c2, pre_shape= [], [], ch[-1], (640,640)  # layers, savelist, ch out
     for i, (f, n, m, args) in enumerate(d['backbone']):  # from, number, module, args

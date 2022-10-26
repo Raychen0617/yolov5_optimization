@@ -62,7 +62,7 @@ def prune(model, save='./checkpoint/...', sparsity=0.25, method="L1"):
     m_speedup = ModelSpeedup(model, im, masks_file=masks)
     m_speedup.speedup_model()
 
-    if save:
+    if save is not None:
         print("Save at ", save)
         torch.save(model,save)
     return model
