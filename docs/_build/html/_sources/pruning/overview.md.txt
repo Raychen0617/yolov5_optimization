@@ -12,7 +12,9 @@ pruner = L1NormPruner(model, config_list)
 # compress the model and generate the masks
 _, masks = pruner.compress()
 ```
-### YOLOv5 tutorial code: <br>
-YOLOv5s backbone yaml: [yolov5sb.yaml](https://github.com/Raychen0617/yolov5_optimization/blob/master/models/yolov5sb.yaml)<br>
-Main: [pruning.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/pruning.py) <br>
-Pruning Algorithm: [optimizer/prune.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/prune.py)<br>
+
+### Why And What's Channel Pruning
+
+### Tutorials:
+[Iterative pruning on yolov5](./iterative_pruning.md) <br>
+[Pruning on yolov5 backbone](./prune.md) 
