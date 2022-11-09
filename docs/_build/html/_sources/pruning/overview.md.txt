@@ -16,5 +16,5 @@ _, masks = pruner.compress()
 ### Why And What's Channel Pruning
 
 ### Tutorials:
-[Iterative pruning on yolov5](./iterative_pruning.md) <br>
+[Iterative pruning on yolov5](./iterative_pruning.md) <br><br>
 [Pruning on yolov5 backbone](./prune.md) 

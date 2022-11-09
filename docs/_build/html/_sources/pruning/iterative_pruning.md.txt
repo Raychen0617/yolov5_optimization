@@ -1,7 +1,5 @@
 # Iterative Pruning
 
-## Preparations
-
 ## Pruning
 
 ### Pruning Function 
@@ -61,22 +59,52 @@ m_speedup = ModelSpeedup(model, im, masks_file=masks)
 m_speedup.speedup_model()
 ```
 
-## Finetuning
+### Match Function 
+
+Extracting Yolo's backbon (full code [match.py/extract_backbone](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py#L164))
+```python
+def extract_backbone(backbone, yolo, backbone_layer=9):
+```
+
+Map backbone structure to Yolo (full code [match.py/match](https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py#L195))
+
+```python
+def match(yolo, pruned_yolo, save):
+```
+
+
+### Pruning Main Code 
+
+Load Yolo Model 
+```python
+yolo = torch.load(args.yolo)
+```
+
+Extract Yolo model's backbone and prune the backbone 
+```python
+backbone = extract_backbone(BACKBONE(cfg=ori_backbone_yaml, nc=200).backbone, yolo)
+backbone = prune(model=backbone, save=None, sparsity=float(args.sparsity), method="L2")
+```
+
+Match the new backbone structure to our Yolo 
+```python
+yolo = match(yolo=yolo.float(),  pruned_yolo=backbone.float(), save=None)
+```
 
 ## Iteratively Prune & Finetuning
-```python 
-iterations = 5
+```bash
+# Pruning 
+$ python iterative_pruning.py --yolo "./checkpoint/multi-trail_yolov5s.pt" --save_path "./iterative_pruning/yolo.pt" --sparsity 0.1 
 
-for iter in range(iterations):
-    backbone.to(device=device)
-    backbone = prune(model=backbone, save=None, sparsity=0.1, method="L2")
-    yolo = match(yolo=yolo,  pruned_yolo=backbone, save=None)
-    yolo.to(device=device)
-    # train & eval
-    opt, yolo = train.run(data='coco128.yaml', imgsz=640, cfg='./models/yolov5s.yaml', run_model=yolo, epochs=1)
-    # load yolo state dict back to backbone
-    backbone.load_state_dict(yolo.state_dict(), strict=False)
+# Finetuning
+$ python train.py --data coco.yaml --weights "./iterative_pruning/yolo.pt" --img 640  --epochs 5
+```
+
+## Automatic Execution 
+```bash
+$ bash iterative_pruning.sh 
 ```
 
 ## Full Code On Github
 [iterative_pruning.py](https://github.com/Raychen0617/yolov5_optimization/blob/master/iterative_pruning.py)
+

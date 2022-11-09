@@ -223,17 +223,19 @@
   <ul class="md-nav__list" data-md-scrollfix="">
         <li class="md-nav__item"><a href="#pruning-iterative-pruning--page-root" class="md-nav__link">Iterative Pruning</a><nav class="md-nav">
               <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#preparations" class="md-nav__link">Preparations</a>
-        </li>
         <li class="md-nav__item"><a href="#pruning" class="md-nav__link">Pruning</a><nav class="md-nav">
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#pruning-function" class="md-nav__link">Pruning Function</a>
+        </li>
+        <li class="md-nav__item"><a href="#match-function" class="md-nav__link">Match Function</a>
+        </li>
+        <li class="md-nav__item"><a href="#pruning-main-code" class="md-nav__link">Pruning Main Code</a>
         </li></ul>
             </nav>
         </li>
-        <li class="md-nav__item"><a href="#finetuning" class="md-nav__link">Finetuning</a>
-        </li>
         <li class="md-nav__item"><a href="#iteratively-prune-finetuning" class="md-nav__link">Iteratively Prune & Finetuning</a>
+        </li>
+        <li class="md-nav__item"><a href="#automatic-execution" class="md-nav__link">Automatic Execution</a>
         </li>
         <li class="md-nav__item"><a href="#full-code-on-github" class="md-nav__link">Full Code On Github</a>
         </li></ul>
@@ -255,9 +257,6 @@
             
   <section id="iterative-pruning">
 <h1 id="pruning-iterative-pruning--page-root">Iterative Pruning<a class="headerlink" href="#pruning-iterative-pruning--page-root" title="Permalink to this heading">¶</a></h1>
-<section id="preparations">
-<h2 id="preparations">Preparations<a class="headerlink" href="#preparations" title="Permalink to this heading">¶</a></h2>
-</section>
 <section id="pruning">
 <h2 id="pruning">Pruning<a class="headerlink" href="#pruning" title="Permalink to this heading">¶</a></h2>
 <section id="pruning-function">
@@ -310,23 +309,47 @@
 </pre></div>
 </div>
 </section>
+<section id="match-function">
+<h3 id="match-function">Match Function<a class="headerlink" href="#match-function" title="Permalink to this heading">¶</a></h3>
+<p>Extracting Yolo’s backbon (full code <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py#L164">match.py/extract_backbone</a>)</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">extract_backbone</span><span class="p">(</span><span class="n">backbone</span><span class="p">,</span> <span class="n">yolo</span><span class="p">,</span> <span class="n">backbone_layer</span><span class="o">=</span><span class="mi">9</span><span class="p">):</span>
+</pre></div>
+</div>
+<p>Map backbone structure to Yolo (full code <a class="reference external" href="https://github.com/Raychen0617/yolov5_optimization/blob/master/optimizer/match.py#L195">match.py/match</a>)</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">match</span><span class="p">(</span><span class="n">yolo</span><span class="p">,</span> <span class="n">pruned_yolo</span><span class="p">,</span> <span class="n">save</span><span class="p">):</span>
+</pre></div>
+</div>
 </section>
-<section id="finetuning">
-<h2 id="finetuning">Finetuning<a class="headerlink" href="#finetuning" title="Permalink to this heading">¶</a></h2>
+<section id="pruning-main-code">
+<h3 id="pruning-main-code">Pruning Main Code<a class="headerlink" href="#pruning-main-code" title="Permalink to this heading">¶</a></h3>
+<p>Load Yolo Model</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">yolo</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">yolo</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Extract Yolo model’s backbone and prune the backbone</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">backbone</span> <span class="o">=</span> <span class="n">extract_backbone</span><span class="p">(</span><span class="n">BACKBONE</span><span class="p">(</span><span class="n">cfg</span><span class="o">=</span><span class="n">ori_backbone_yaml</span><span class="p">,</span> <span class="n">nc</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span><span class="o">.</span><span class="n">backbone</span><span class="p">,</span> <span class="n">yolo</span><span class="p">)</span>
+<span class="n">backbone</span> <span class="o">=</span> <span class="n">prune</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">backbone</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">sparsity</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s2">"L2"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Match the new backbone structure to our Yolo</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">yolo</span> <span class="o">=</span> <span class="n">match</span><span class="p">(</span><span class="n">yolo</span><span class="o">=</span><span class="n">yolo</span><span class="o">.</span><span class="n">float</span><span class="p">(),</span>  <span class="n">pruned_yolo</span><span class="o">=</span><span class="n">backbone</span><span class="o">.</span><span class="n">float</span><span class="p">(),</span> <span class="n">save</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 </section>
 <section id="iteratively-prune-finetuning">
 <h2 id="iteratively-prune-finetuning">Iteratively Prune &amp; Finetuning<a class="headerlink" href="#iteratively-prune-finetuning" title="Permalink to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">iterations</span> <span class="o">=</span> <span class="mi">5</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Pruning </span>
+$ python iterative_pruning.py --yolo <span class="s2">"./checkpoint/multi-trail_yolov5s.pt"</span> --save_path <span class="s2">"./iterative_pruning/yolo.pt"</span> --sparsity <span class="m">0</span>.1 
 
-<span class="k">for</span> <span class="nb">iter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iterations</span><span class="p">):</span>
-    <span class="n">backbone</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-    <span class="n">backbone</span> <span class="o">=</span> <span class="n">prune</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">backbone</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"L2"</span><span class="p">)</span>
-    <span class="n">yolo</span> <span class="o">=</span> <span class="n">match</span><span class="p">(</span><span class="n">yolo</span><span class="o">=</span><span class="n">yolo</span><span class="p">,</span>  <span class="n">pruned_yolo</span><span class="o">=</span><span class="n">backbone</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-    <span class="n">yolo</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-    <span class="c1"># train &amp; eval</span>
-    <span class="n">opt</span><span class="p">,</span> <span class="n">yolo</span> <span class="o">=</span> <span class="n">train</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="s1">'coco128.yaml'</span><span class="p">,</span> <span class="n">imgsz</span><span class="o">=</span><span class="mi">640</span><span class="p">,</span> <span class="n">cfg</span><span class="o">=</span><span class="s1">'./models/yolov5s.yaml'</span><span class="p">,</span> <span class="n">run_model</span><span class="o">=</span><span class="n">yolo</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="c1"># load yolo state dict back to backbone</span>
-    <span class="n">backbone</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">yolo</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="c1"># Finetuning</span>
+$ python train.py --data coco.yaml --weights <span class="s2">"./iterative_pruning/yolo.pt"</span> --img <span class="m">640</span>  --epochs <span class="m">5</span>
+</pre></div>
+</div>
+</section>
+<section id="automatic-execution">
+<h2 id="automatic-execution">Automatic Execution<a class="headerlink" href="#automatic-execution" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash iterative_pruning.sh 
 </pre></div>
 </div>
 </section>

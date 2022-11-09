@@ -13,7 +13,13 @@ pruner = L1NormPruner(model, config_list)
 _, masks = pruner.compress()
 ```
 
-### Why And What's Channel Pruning
+### What's Channel Pruning
+
+Goal: Aim to remove less important channels while minimizing the accuracy loss  
+To rank the importance of channels, we have to choose a ranking algorithm (L1, L2, FPGM, etc.)
+
+### Why Channel Pruning
+
 
 ### Tutorials:
 [Iterative pruning on yolov5](./iterative_pruning.md) <br><br>
