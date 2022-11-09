@@ -130,7 +130,7 @@ def fix_nasbackbone(backbone, backbone_nas):
                 exit()
     return backbone
 
-def fix_nasyolo(yolo, nas_yolo, backbone_layer=8):
+def fix_nasyolo(yolo, nas_yolo, backbone_layer=9):
     
     # This function matches nas yolo to original yolo 
 
@@ -159,6 +159,37 @@ def fix_nasyolo(yolo, nas_yolo, backbone_layer=8):
                 print("sth gets wrong !!!!, please checkout optimizer/match.py")
                 exit()
     return yolo
+
+
+def extract_backbone(backbone, yolo, backbone_layer=9):
+    
+    # This function matches nas backbone to original backbone
+
+    device = torch.device("cpu")
+    dummy_input = torch.rand(1, 3, 640, 640)
+
+    for name, module in yolo.named_children():
+        yolo = []
+        for submodule in module:
+            yolo.append(submodule)
+
+    for name, module in backbone.named_children():
+        
+        for layerid in range(backbone_layer):
+            #print(module[layerid], type(module[layerid]))
+            if isinstance(module[layerid], Conv):
+                module[layerid] = conv_match(module[layerid], yolo[layerid])
+            
+            elif isinstance(module[layerid], C3):
+                module[layerid].cv1 = conv_match(module[layerid].cv1, yolo[layerid].cv1)
+                module[layerid].cv2 = conv_match(module[layerid].cv2, yolo[layerid].cv2)
+                module[layerid].cv3 = conv_match(module[layerid].cv3, yolo[layerid].cv3)
+                module[layerid].m = yolo[layerid].m
+
+            else:
+                print("sth gets wrong !!!!, please checkout optimizer/match.py")
+                exit()
+    return backbone
 
 
 def match(yolo, pruned_yolo, save):
@@ -205,7 +236,7 @@ def match(yolo, pruned_yolo, save):
     yolo.load_state_dict(pruned_yolo.state_dict() , strict=False)
 
     print("Matching two different models ", yolo(dummy_input)[0].shape == (1, 3, 80, 80, 85))
-
+    
     if save is not None:
         torch.save(yolo, save)
         print("Save at ", save)
