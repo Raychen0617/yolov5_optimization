@@ -1,7 +1,7 @@
-## <div align="center">YoloV5 Optimization </div>
+## <div align="center">YOLOv5 Optimization </div>
 
-This repo forks from [ultralytics/yolov5](https://github.com/ultralytics/yolov5) and performs Pruning, Knowledge distillation, Neural architecture search on YoloV5 <br>
-For more info, please refer to [docs](https://yolov5-optimization.readthedocs.io/en/latest/) <br><br>
+This repo forks from [ultralytics/yolov5](https://github.com/ultralytics/yolov5) and performs Pruning, KD, Neural architecture search on YOLOv5 <br>
+For more info, please refer to [docs.io](https://yolov5-optimization.readthedocs.io/en/latest/) <br><br>
 
 
 <div align="center">
