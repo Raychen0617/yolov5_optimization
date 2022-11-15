@@ -3,6 +3,10 @@
 This repo forks from [ultralytics/yolov5](https://github.com/ultralytics/yolov5) and performs Pruning, KD, Neural architecture search on YOLOv5 <br>
 For more info, please refer to [docs.io](https://yolov5-optimization.readthedocs.io/en/latest/) <br><br>
 
+<p>
+   <a align="left" href="https://yolov5-optimization.readthedocs.io/en/latest/" target="_blank">
+   <img width="850" src="https://i.imgur.com/7LLGQ0U.png"></a>
+</p>
 
 <div align="center">
 <p>
