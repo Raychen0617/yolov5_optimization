@@ -34,7 +34,7 @@
   
   
   
-    <title>Pruning &#8212; Yolov5 Optimization   documentation</title>
+    <title>Channel Pruning &#8212; Yolov5 Optimization   documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/material.css" />
   
@@ -100,7 +100,7 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           <span class="md-header-nav__topic">Yolov5 Optimization</span>
-          <span class="md-header-nav__topic"> Pruning </span>
+          <span class="md-header-nav__topic"> Channel Pruning </span>
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
@@ -221,15 +221,23 @@
 <nav class="md-nav md-nav--secondary">
     <label class="md-nav__title" for="__toc">Contents</label>
   <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#pruning-overview--page-root" class="md-nav__link">Pruning</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#pruning-overview--page-root" class="md-nav__link">Channel Pruning</a><nav class="md-nav">
               <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#goal" class="md-nav__link">Goal:</a>
+        <li class="md-nav__item"><a href="#what-s-channel-pruning" class="md-nav__link">What’s Channel Pruning</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#goal" class="md-nav__link">Goal</a>
         </li>
-        <li class="md-nav__item"><a href="#ranking-algorithm" class="md-nav__link">Ranking algorithm:</a>
+        <li class="md-nav__item"><a href="#ranking-algorithm" class="md-nav__link">Ranking algorithm</a>
         </li>
-        <li class="md-nav__item"><a href="#why-and-what-s-channel-pruning" class="md-nav__link">Why And What’s Channel Pruning</a>
+        <li class="md-nav__item"><a href="#pruning-scheduler" class="md-nav__link">Pruning Scheduler</a>
         </li>
-        <li class="md-nav__item"><a href="#tutorials" class="md-nav__link">Tutorials:</a>
+        <li class="md-nav__item"><a href="#why-channel-pruning" class="md-nav__link">Why Channel Pruning</a>
+        </li>
+        <li class="md-nav__item"><a href="#pros-and-cons" class="md-nav__link">Pros and Cons</a>
+        </li></ul>
+            </nav>
+        </li>
+        <li class="md-nav__item"><a href="#tutorials" class="md-nav__link">Tutorials</a>
         </li></ul>
             </nav>
         </li>
@@ -247,14 +255,18 @@
         <div class="md-content">
           <article class="md-content__inner md-typeset" role="main">
             
-  <section id="pruning">
-<h1 id="pruning-overview--page-root">Pruning<a class="headerlink" href="#pruning-overview--page-root" title="Permalink to this heading">¶</a></h1>
+  <section id="channel-pruning">
+<h1 id="pruning-overview--page-root">Channel Pruning<a class="headerlink" href="#pruning-overview--page-root" title="Permalink to this heading">¶</a></h1>
+<section id="what-s-channel-pruning">
+<h2 id="what-s-channel-pruning">What’s Channel Pruning<a class="headerlink" href="#what-s-channel-pruning" title="Permalink to this heading">¶</a></h2>
 <section id="goal">
-<h2 id="goal">Goal:<a class="headerlink" href="#goal" title="Permalink to this heading">¶</a></h2>
-<p>Aim to remove unimportant channels while minimizing the reconstruction error  <br/></p>
+<h3 id="goal">Goal<a class="headerlink" href="#goal" title="Permalink to this heading">¶</a></h3>
+<p>Aim to reduce the channel numbers in the network while minimizing the reconstruction error (accuracy loss)
+To rank the importance of channels, we have to choose a ranking algorithm (L1, L2, FPGM, etc.)</p>
+<p><img alt="" src="../_images/channel_pruning.jpg"/></p>
 </section>
 <section id="ranking-algorithm">
-<h2 id="ranking-algorithm">Ranking algorithm:<a class="headerlink" href="#ranking-algorithm" title="Permalink to this heading">¶</a></h2>
+<h3 id="ranking-algorithm">Ranking algorithm<a class="headerlink" href="#ranking-algorithm" title="Permalink to this heading">¶</a></h3>
 <p>To rank the importance of every channel (ex: L1, L2, APOz, FPGM, etc.) <br/>
 Example of channel pruning, for more details, please refer to <a class="reference external" href="https://nni.readthedocs.io/en/stable/tutorials/pruning_quick_start_mnist.html">NNI</a></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nni.compression.pytorch.pruning</span> <span class="kn">import</span> <span class="n">L1NormPruner</span>
@@ -264,11 +276,29 @@ Example of channel pruning, for more details, please refer to <a class="referenc
 </pre></div>
 </div>
 </section>
-<section id="why-and-what-s-channel-pruning">
-<h2 id="why-and-what-s-channel-pruning">Why And What’s Channel Pruning<a class="headerlink" href="#why-and-what-s-channel-pruning" title="Permalink to this heading">¶</a></h2>
+<section id="pruning-scheduler">
+<h3 id="pruning-scheduler">Pruning Scheduler<a class="headerlink" href="#pruning-scheduler" title="Permalink to this heading">¶</a></h3>
+<p>Experiment results shows that pruning from low sparsity to high sparsity, iteratively increase sparsity with finetuning can significantly reduce accuracy loss
+<img alt="" src="../_images/it_prune.jpg"/></p>
+</section>
+<section id="why-channel-pruning">
+<h3 id="why-channel-pruning">Why Channel Pruning<a class="headerlink" href="#why-channel-pruning" title="Permalink to this heading">¶</a></h3>
+</section>
+<section id="pros-and-cons">
+<h3 id="pros-and-cons">Pros and Cons<a class="headerlink" href="#pros-and-cons" title="Permalink to this heading">¶</a></h3>
+<p>Pros:</p>
+<ul class="simple">
+<li><p>Pruning can significantly decrease inference time in general</p></li>
+<li><p>Most pruning time acceptable in general (depends on pruning methods)</p></li>
+</ul>
+<p>Cons:</p>
+<ul class="simple">
+<li><p>Accuracy loss may be huge</p></li>
+</ul>
+</section>
 </section>
 <section id="tutorials">
-<h2 id="tutorials">Tutorials:<a class="headerlink" href="#tutorials" title="Permalink to this heading">¶</a></h2>
+<h2 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference internal" href="iterative_pruning.html"><span class="doc std std-doc">Iterative pruning on yolov5</span></a> <br/><br/>
 <a class="reference internal" href="prune.html"><span class="doc std std-doc">Pruning on yolov5 backbone</span></a></p>
 </section>

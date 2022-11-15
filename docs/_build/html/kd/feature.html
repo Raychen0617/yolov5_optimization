@@ -34,7 +34,7 @@
   
   
   
-    <title>Knowledge distillation (KD) &#8212; Yolov5 Optimization   documentation</title>
+    <title>Distill features &#8212; Yolov5 Optimization   documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/material.css" />
   
@@ -54,7 +54,7 @@
   <script type="text/javascript">
     // for gallery links
     GIT_COMMIT_ID = "";
-    PAGENAME = "kd/overview";
+    PAGENAME = "kd/feature";
     GALLERY_LINKS = {
       colab: "../_static/img/gallery-colab.svg",
       notebook: "../_static/img/gallery-download.svg",
@@ -82,7 +82,7 @@
   <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer">
   <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search">
   <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
-  <a href="#kd/overview" tabindex="1" class="md-skip"> Skip to content </a>
+  <a href="#kd/feature" tabindex="1" class="md-skip"> Skip to content </a>
   <header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid">
     <div class="md-flex navheader">
@@ -100,7 +100,7 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           <span class="md-header-nav__topic">Yolov5 Optimization</span>
-          <span class="md-header-nav__topic"> Knowledge distillation (KD) </span>
+          <span class="md-header-nav__topic"> Distill features </span>
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
@@ -219,28 +219,9 @@
               <div class="md-sidebar__inner">
                 
 <nav class="md-nav md-nav--secondary">
-    <label class="md-nav__title" for="__toc">Contents</label>
   <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#kd-overview--page-root" class="md-nav__link">Knowledge distillation (KD)</a><nav class="md-nav">
-              <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#what-is-knowledge-distillation" class="md-nav__link">What is Knowledge Distillation?</a><nav class="md-nav">
-              <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#goal" class="md-nav__link">Goal</a>
-        </li>
-        <li class="md-nav__item"><a href="#methods" class="md-nav__link">Methods</a>
-        </li>
-        <li class="md-nav__item"><a href="#pros-and-cons" class="md-nav__link">Pros and cons</a>
-        </li>
-        <li class="md-nav__item"><a href="#how-to-choose-student-model" class="md-nav__link">How to choose student model</a>
-        </li></ul>
-            </nav>
-        </li>
-        <li class="md-nav__item"><a href="#tutorials" class="md-nav__link">Tutorials</a>
-        </li></ul>
-            </nav>
-        </li>
     
-<li class="md-nav__item"><a class="md-nav__extra_link" href="../_sources/kd/overview.md.txt">Show Source</a> </li>
+<li class="md-nav__item"><a class="md-nav__extra_link" href="../_sources/kd/feature.md.txt">Show Source</a> </li>
 
 <li id="searchbox" class="md-nav__item"></li>
 
@@ -253,61 +234,11 @@
         <div class="md-content">
           <article class="md-content__inner md-typeset" role="main">
             
-  <section id="knowledge-distillation-kd">
-<h1 id="kd-overview--page-root">Knowledge distillation (KD)<a class="headerlink" href="#kd-overview--page-root" title="Permalink to this heading">¶</a></h1>
-<section id="what-is-knowledge-distillation">
-<h2 id="what-is-knowledge-distillation">What is Knowledge Distillation?<a class="headerlink" href="#what-is-knowledge-distillation" title="Permalink to this heading">¶</a></h2>
-<section id="goal">
-<h3 id="goal">Goal<a class="headerlink" href="#goal" title="Permalink to this heading">¶</a></h3>
-<p>To Improve student’s accuracy with the help of a teacher model <br/>
-<img alt="" src="../_images/KD.png"/></p>
-</section>
-<section id="methods">
-<h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permalink to this heading">¶</a></h3>
-<p>We can divide KD methods into two categories by the learning targets</p>
-<ul class="simple">
-<li><p>Distll logits (learning the output distribution of the teacher model)</p>
-<ul>
-<li><p>ex: Deep Mutual learning, Soft-logits</p></li>
-</ul>
-</li>
-<li><p>Distll features (learning the intermediate value such as feature maps of the teacher model)</p>
-<ul>
-<li><p>ex: FitNet, Distilling-Object-Detectors</p></li>
-</ul>
-</li>
-</ul>
-</section>
-<section id="pros-and-cons">
-<h3 id="pros-and-cons">Pros and cons<a class="headerlink" href="#pros-and-cons" title="Permalink to this heading">¶</a></h3>
-<p>Pros:</p>
-<ul class="simple">
-<li><p>Easy to implement</p></li>
-<li><p>Training time is acceptable</p></li>
-<li><p>Accuracy is stable</p></li>
-</ul>
-<p>Cons:</p>
-<ul class="simple">
-<li><p>Need to choose an appropriate student</p></li>
-</ul>
-</section>
-<section id="how-to-choose-student-model">
-<h3 id="how-to-choose-student-model">How to choose student model<a class="headerlink" href="#how-to-choose-student-model" title="Permalink to this heading">¶</a></h3>
-<p>Student’s and teacher’s structure should be closely related <br/></p>
-<ul class="simple">
-<li><p>Reduce block number (Resnet block, transformer block)</p></li>
-<li><p>Reduce hyperparameters (# of filters, size of filters, stride … etc)</p></li>
-<li><p>Use more efficient structure (replace conv with depthwise separable conv)</p></li>
-<li><p>Reduce model layers (後面幾層)</p></li>
-<li><p>Low level vs high level (semantic) features</p></li>
-</ul>
-</section>
-</section>
-<section id="tutorials">
-<h2 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this heading">¶</a></h2>
-<p><a class="reference internal" href="logits.html"><span class="doc std std-doc">Distill logits on Yolov5</span></a> <br/><br/>
-<a class="reference internal" href="feature.html"><span class="doc std std-doc">Distill features on Yolov5</span></a></p>
-</section>
+  <section id="distill-features">
+<h1 id="kd-feature--page-root">Distill features<a class="headerlink" href="#kd-feature--page-root" title="Permalink to this heading">¶</a></h1>
+<p>The paper implemented in this experiement is <a class="reference external" href="https://www.notion.so/chentzj/Feature-Distill-For-Detection-Models-d9630e17e8534041a3c8feeabf517c84#9cd5ae365dc74558a2acf2a89cae70d5">Distilling-Object-Detectors</a><br/></p>
+<p>Goal: Not learning the whole feature map (too complicated for the student). Learn near object anchor locations’ features.</p>
+<p><img alt="" src="../_images/distill_feature.png"/></p>
 </section>
 
 

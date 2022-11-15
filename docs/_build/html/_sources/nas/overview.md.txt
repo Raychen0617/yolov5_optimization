@@ -22,6 +22,11 @@ self.layer = nn.LayerChoice([
     nn.Identity()
 ])
 ```
+
+The search space visualization in this experiment
+![](./NAS.jpg)
+
+
 For more details, please refer to [NNI](https://nni.readthedocs.io/en/stable/nas/construct_space.html)
 
 ## Oneshot vs Multi-trail NAS 
