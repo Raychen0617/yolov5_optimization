@@ -4,6 +4,7 @@ Validate a trained YOLOv5 model accuracy on a custom dataset
 
 Usage:
     $ python path/to/val.py --weights yolov5s.pt --data coco128.yaml --img 640
+    python val.py --weights ./runs/train/exp6/weights/best.pt --data coco.yaml --img 640
 
 Usage - formats:
     $ python path/to/val.py --weights yolov5s.pt                 # PyTorch
