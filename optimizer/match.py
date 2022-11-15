@@ -163,7 +163,7 @@ def fix_nasyolo(yolo, nas_yolo, backbone_layer=9):
 
 def extract_backbone(backbone, yolo, backbone_layer=9):
     
-    # This function matches nas backbone to original backbone
+    # This function extracts Yolo's backbone 
 
     device = torch.device("cpu")
     dummy_input = torch.rand(1, 3, 640, 640)
