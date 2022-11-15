@@ -4,6 +4,14 @@
    <img width="850" src="https://github.com/ultralytics/yolov5/releases/download/v1.0/splash.jpg"></a>
 </p>
 
+### YoloV5 Optimization 
+
+This repo performs Pruning, Knowledge distillation, Neural architecture search on YoloV5
+
+for more info, please refer to [docs](https://yolov5-optimization.readthedocs.io/en/latest/)
+
+
+
 English | [简体中文](.github/README_cn.md)
 <br>
 <div>
