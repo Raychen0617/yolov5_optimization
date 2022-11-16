@@ -29,6 +29,9 @@ from utils.plots import feature_visualization
 from utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
                                time_sync)
 from nni.retiarii import model_wrapper
+from optimizer.anchor import make_center_anchors
+from optimizer.mask import center_to_corner, find_jaccard_overlap, corner_to_center
+
 
 try:
     import thop  # for FLOPs computation
@@ -143,11 +146,18 @@ class Detect(nn.Module):
         anchor_grid = (self.anchors[i] * self.stride[i]).view((1, self.na, 1, 1, 2)).expand(shape)
         return grid, anchor_grid
 
-@model_wrapper
+#@model_wrapper
 class Model(nn.Module):
     # YOLOv5 model
     def __init__(self, cfg='yolov5s.yaml', ch=3, nc=None, anchors=None):  # model, input channels, number of classes
+        
         super().__init__()
+        
+        self.anchors = [(1.3221, 1.73145), (3.19275, 4.00944), (5.05587, 8.09892), (9.47112, 4.84053),
+                        (11.2364, 10.0071)]
+                        
+        self.num_anchors = len(self.anchors)
+
         if isinstance(cfg, dict):
             self.yaml = cfg  # model dict
         else:  # is *.yaml
@@ -183,10 +193,83 @@ class Model(nn.Module):
         initialize_weights(self)
         self.info()
         LOGGER.info('')
+    
+    def _get_imitation_mask(self, x, targets, iou_factor=0.5):
+        """
+        gt_box: (B, K, 4) [x_min, y_min, x_max, y_max]
+        """
+        self.anchors = [(1.3221, 1.73145), (3.19275, 4.00944), (5.05587, 8.09892), (9.47112, 4.84053),
+                        (11.2364, 10.0071)]
+                        
+        self.num_anchors = len(self.anchors)
 
-    def forward(self, x, augment=False, profile=False, visualize=False):
+        out_size = x.size(2)
+        batch_size = x.size(0)
+        device = targets.device
+
+        mask_batch = torch.zeros([batch_size, out_size, out_size])
+        
+        if not len(targets):
+            return mask_batch
+        
+        gt_boxes = [[] for i in range(batch_size)]
+        for i in range(len(targets)):
+            gt_boxes[int(targets[i, 0].data)] += [targets[i, 2:].clone().detach().unsqueeze(0)]
+        
+        max_num = 0
+        for i in range(batch_size):
+            max_num = max(max_num, len(gt_boxes[i]))
+            if len(gt_boxes[i]) == 0:
+                gt_boxes[i] = torch.zeros((1, 4), device=device)
+            else:
+                gt_boxes[i] = torch.cat(gt_boxes[i], 0)
+        
+        for i in range(batch_size):
+            # print(gt_boxes[i].device)
+            if max_num - gt_boxes[i].size(0):
+                gt_boxes[i] = torch.cat((gt_boxes[i], torch.zeros((max_num - gt_boxes[i].size(0), 4), device=device)), 0)
+            gt_boxes[i] = gt_boxes[i].unsqueeze(0)
+                
+        
+        gt_boxes = torch.cat(gt_boxes, 0)
+        gt_boxes *= out_size
+        
+        center_anchors = make_center_anchors(anchors_wh=self.anchors, grid_size=out_size, device=device)
+        anchors = center_to_corner(center_anchors).view(-1, 4)  # (N, 4)
+        
+        gt_boxes = center_to_corner(gt_boxes)
+
+        mask_batch = torch.zeros([batch_size, out_size, out_size], device=device)
+
+        for i in range(batch_size):
+            num_obj = gt_boxes[i].size(0)
+            if not num_obj:
+                continue
+             
+            IOU_map = find_jaccard_overlap(anchors, gt_boxes[i], 0).view(out_size, out_size, self.num_anchors, num_obj)
+            max_iou, _ = IOU_map.view(-1, num_obj).max(dim=0)
+            mask_img = torch.zeros([out_size, out_size], dtype=torch.int64, requires_grad=False).type_as(x)
+            threshold = max_iou * iou_factor
+
+            for k in range(num_obj):
+
+                mask_per_gt = torch.sum(IOU_map[:, :, :, k] > threshold[k], dim=2)
+
+                mask_img += mask_per_gt
+
+                mask_img += mask_img
+            mask_batch[i] = mask_img
+
+        mask_batch = mask_batch.clamp(0, 1)
+        return mask_batch  # (B, h, w)
+
+    def forward(self, x, augment=False, profile=False, visualize=False, target=None):
         if augment:
             return self._forward_augment(x)  # augmented inference, None
+        if target != None: 
+            preds, features = self._forward_once(x, profile, visualize, target)
+            mask = self._get_imitation_mask(features, target).unsqueeze(1)
+            return preds, features, mask
         return self._forward_once(x, profile, visualize)  # single-scale inference, train
 
     def _forward_augment(self, x):
@@ -203,8 +286,9 @@ class Model(nn.Module):
         y = self._clip_augmented(y)  # clip augmented tails
         return torch.cat(y, 1), None  # augmented inference, train
 
-    def _forward_once(self, x, profile=False, visualize=False):
+    def _forward_once(self, x, profile=False, visualize=False, target=None):
         y, dt = [], []  # outputs
+        cnt = 0
         for m in self.model:
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
@@ -214,6 +298,12 @@ class Model(nn.Module):
             y.append(x if m.i in self.save else None)  # save output
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
+            if isinstance(m, Concat):
+                cnt += 1
+                if cnt == 2:
+                    feature = x
+        if target is not None:
+            return x, feature
         return x
 
     def _descale_pred(self, p, flips, scale, img_size):
@@ -416,8 +506,9 @@ class Backbone(nn.Module):
         y = self._clip_augmented(y)  # clip augmented tails
         return torch.cat(y, 1), None  # augmented inference, train
 
-    def _forward_once(self, x, profile=False, visualize=False):
+    def _forward_once(self, x, profile=False, visualize=False, target=None):
         y, dt = [], []  # outputs
+        cnt = 0
         for m in self.model:
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
@@ -427,6 +518,12 @@ class Backbone(nn.Module):
             y.append(x if m.i in self.save else None)  # save output
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
+            if isinstance(m, Concat):
+                cnt += 1
+                if cnt == 2:
+                    feature = x
+        if target is not None:
+            return x, feature
         return x
 
     def _descale_pred(self, p, flips, scale, img_size):

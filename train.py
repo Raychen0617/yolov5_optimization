@@ -12,7 +12,10 @@ Usage:
     $ python train.py --data coco128.yaml --weights '' --cfg yolov5s.yaml --img 640  # from scratch
 
 KD Usage: 
-    $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/enasv2_L1_yolov5s.pt" --t_weights "./checkpoint/yolov5m.pt" 
+    $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/enasv2_L1_yolov5s.pt" --t_weights "./checkpoint/yolov5m.pt"
+
+FKD Usage: 
+    $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/multi_nas_yolov5s.pt" --ft_weights "./checkpoint/yolov5m.pt" 
 """
 
 import argparse
@@ -53,7 +56,7 @@ from utils.general import (LOGGER, check_amp, check_dataset, check_file, check_g
                            one_cycle, print_args, print_mutation, strip_optimizer)
 from utils.loggers import Loggers
 from utils.loggers.wandb.wandb_utils import check_wandb_resume
-from utils.loss import ComputeLoss
+from optimizer.loss import ComputeLoss
 from utils.metrics import fitness
 from utils.plots import plot_evolve, plot_labels
 from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
@@ -63,15 +66,17 @@ LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable
 RANK = int(os.getenv('RANK', -1))
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
 
-from optimizer.loss import compute_distillation_output_loss
+from optimizer.loss import compute_distillation_output_loss #, compute_feature_distillation_output_loss
 
 
 def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
-    save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze = \
+    save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze, run_model = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
-        opt.resume, opt.noval, opt.nosave, opt.workers, opt.freeze
+        opt.resume, opt.noval, opt.nosave, opt.workers, opt.freeze, opt.run_model
     callbacks.run('on_pretrain_routine_start')
 
+    opt.run_model = None
+    print("save dir = ",save_dir, "***************************")
     # Directories
     w = save_dir / 'weights'  # weights dir
     (w.parent if evolve else w).mkdir(parents=True, exist_ok=True)  # make dir
@@ -136,13 +141,45 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         LOGGER.info(f'Transferred {len(csd)}/{len(model.state_dict())} items from {weights}')  # report
     else:
         #model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
-        model = torch.load(weights).cuda()
-        print(model)
+        '''
+        Method1
+        from nni.retiarii import fixed_arch
+        with fixed_arch("./output/Random_yolov5s.json"):
+           model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device) 
+
+        Method2
+        model = torch.load(weights)['model'].cuda()
+
+
+        Iterative pruning
+        model = run_model
+
+
+        from nni.retiarii import fixed_arch
+        with fixed_arch("./output/dartsv2_yolov5s.json"):
+           model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device) 
+        '''
+        #model = torch.load("./checkpoint/random_L2_yolov5s.pt")
+        #print(model)
+        #model = run_model
+        model = torch.load(weights)
+        model.to(device)
         
     amp = check_amp(model)  # check AMP
 
     t_weights = opt.t_weights
-    kd = t_weights.endswith('.pt')
+    ft_weights = opt.ft_weights
+    kd = None
+    fkd = None
+
+    if t_weights is not None:
+        kd = t_weights.endswith('.pt')
+    
+    if ft_weights is not None:
+        fkd = ft_weights.endswith('.pt')
+    
+
+    
     if kd:
         print("load t-model from", opt.t_weights)
         t_model = torch.load(opt.t_weights, map_location=torch.device('cpu'))
@@ -153,6 +190,17 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         t_model.to(device)
         t_model.float()
         t_model.train()
+    
+    if fkd:
+        print("load feature distill t-model from", opt.ft_weights)
+        ft_model = torch.load(opt.ft_weights, map_location=torch.device('cpu'))
+        if ft_model.get("model", None) is not None:
+            ft_model = ft_model["model"]
+        else:
+            print("loading teacher model error !!!!!!!!!!")
+        ft_model.to(device)
+        ft_model.float()
+        ft_model.train()
 
     # Freeze
     freeze = [f'model.{x}.' for x in (freeze if len(freeze) > 1 else range(freeze[0]))]  # layers to freeze
@@ -266,6 +314,24 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     model.hyp = hyp  # attach hyperparameters to model
     model.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc  # attach class weights
     model.names = names
+    
+    if kd:
+        t_model.nc = nc  # attach number of classes to model
+        t_model.hyp = hyp  # attach hyperparameters to model
+        t_model.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc  # attach class weights
+        t_model.names = names
+    
+        for param in t_model.parameters():
+            param.requires_grad = False
+
+    if fkd:
+        ft_model.nc = nc  # attach number of classes to model
+        ft_model.hyp = hyp  # attach hyperparameters to model
+        ft_model.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc  # attach class weights
+        ft_model.names = names
+    
+        for param in ft_model.parameters():
+            param.requires_grad = False
 
     # Start training
     t0 = time.time()
@@ -284,6 +350,17 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 f'Using {train_loader.num_workers * WORLD_SIZE} dataloader workers\n'
                 f"Logging results to {colorstr('bold', save_dir)}\n"
                 f'Starting training for {epochs} epochs...')
+
+    if fkd:
+        dump_image = torch.zeros((1, 3, opt.imgsz, opt.imgsz), device=device)
+        targets = torch.Tensor([[0, 0, 0, 0, 0, 0]]).to(device)
+        _, features, _ = model(dump_image, target=targets)  # forward
+        _, teacher_feature, _ = ft_model(dump_image, target=targets) 
+        _, student_channel, student_out_size, _ = features.shape
+        _, teacher_channel, teacher_out_size, _ = teacher_feature.shape
+        stu_feature_adapt = nn.Sequential(nn.Conv2d(student_channel, teacher_channel, 3, padding=1, stride=int(student_out_size / teacher_out_size)), nn.ReLU()).to(device)
+
+
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         callbacks.run('on_train_epoch_start')
         model.train()
@@ -308,10 +385,10 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             pbar = tqdm(pbar, total=nb, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')  # progress bar
         optimizer.zero_grad()
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
+            
             callbacks.run('on_train_batch_start')
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255  # uint8 to float32, 0-255 to 0.0-1.0
-
             # Warmup
             if ni <= nw:
                 xi = [0, nw]  # x interp
@@ -333,14 +410,21 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
             # Forward
             with torch.cuda.amp.autocast(amp):
-                pred = model(imgs)  # forward    
-                loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
-                
-                if kd: 
-                    t_pred = t_model(imgs)
-                    dloss = compute_distillation_output_loss(pred, t_pred, model, opt.dist_loss, opt.temperature)
-                    loss += dloss
 
+                if fkd: 
+                    pred, features, _ = model(imgs, target=targets.to(device))
+                    _, teacher_feature, mask = ft_model(imgs, target=targets.to(device))
+                    loss, loss_items = compute_loss(pred, targets.to(device), teacher_feature.detach(), stu_feature_adapt(features), mask.detach())  # loss scaled by batch_size
+
+                else:
+                    pred = model(imgs)  # forward    
+                    loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+                    
+                    if kd: 
+                        t_pred = t_model(imgs)
+                        dloss = compute_distillation_output_loss(pred, t_pred, model, opt.dist_loss, opt.temperature)
+                        loss += dloss
+                
                 if RANK != -1:
                     loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
                 if opt.quad:
@@ -461,7 +545,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         callbacks.run('on_train_end', last, best, plots, epoch, results)
 
     torch.cuda.empty_cache()
-    return results
+    return model
 
 
 def parse_opt(known=False):
@@ -511,6 +595,10 @@ def parse_opt(known=False):
     parser.add_argument('--t_weights', type=str, default=None, help='teacher model weights')
     parser.add_argument('--dist_loss', type=str, default='l2', help='using kl/l2 loss in distillation')
     parser.add_argument('--temperature', type=int, default=5, help='temperature in distilling training')
+    parser.add_argument('--ft_weights', type=str, default=None, help='teacher model weights')
+
+    # Iterative pruning
+    parser.add_argument('--run_model', type=Model, default=None, help='the model from other code')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
@@ -563,7 +651,7 @@ def main(opt, callbacks=Callbacks()):
 
     # Train
     if not opt.evolve:
-        train(opt.hyp, opt, device, callbacks)
+        return_model = train(opt.hyp, opt, device, callbacks)
         if WORLD_SIZE > 1 and RANK == 0:
             LOGGER.info('Destroying process group... ')
             dist.destroy_process_group()
@@ -655,15 +743,16 @@ def main(opt, callbacks=Callbacks()):
         LOGGER.info(f'Hyperparameter evolution finished {opt.evolve} generations\n'
                     f"Results saved to {colorstr('bold', save_dir)}\n"
                     f'Usage example: $ python train.py --hyp {evolve_yaml}')
-
+    return return_model
 
 def run(**kwargs):
     # Usage: import train; train.run(data='coco128.yaml', imgsz=320, weights='yolov5m.pt')
+    
     opt = parse_opt(True)
     for k, v in kwargs.items():
         setattr(opt, k, v)
-    main(opt)
-    return opt
+    return_model = main(opt)
+    return opt, return_model
 
 
 if __name__ == "__main__":
