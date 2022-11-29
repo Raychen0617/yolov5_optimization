@@ -24,6 +24,7 @@ Experiment results shows that pruning from low sparsity to high sparsity, iterat
 ![](./it_prune.jpg)
 
 ### Why Channel Pruning
+Pruning methods can be roughly divided into two categories, sparsification and channel prunning. There are two ways for sparsification, one is to modify the whole model structure. This way is model-specific (we want to use more general pruning methods in this project). Another one is to add masks on model weights. However, this way requires the deep learning framework support for sparse matrix operation speedup to have real effects on the inference time (Pytorch does not support). Therefore, in this project, we choose to use channel pruning, which is a general method (for CNN-based network) and can reduce the inference time no matter the deep learning framework. 
 
 ### Pros and Cons 
 Pros:

@@ -30,7 +30,10 @@ The search space visualization in this experiment
 For more details, please refer to [NNI](https://nni.readthedocs.io/en/stable/nas/construct_space.html)
 
 ## Oneshot vs Multi-trail NAS 
-
+- Multi-trail NAS: In Multi-trail NAS, users need model evaluator to evaluate the performance of each sampled model, and need an exploration strategy to sample models from a defined model space. Multi-trail mechanism is easy to understand and implement, therefore, implementing new functions (ex: efficiency limits) is much easier in Multi-trial. However, Multi-trail also needs more  traininig time than Oneshot. 
+<br><br>
+- Oneshot NAS: One-shot NAS algorithms leverage weight sharing among models in neural architecture search space to train a supernet, and use this supernet to guide the selection of better models. This type of algorihtms greatly reduces computational resource compared to independently training each model from scratch (Multi-trial NAS). The following figure shows how Oneshot NAS trains a supernet. 
+![](./oneshot.png)
 
 ## Tutorials
 
