@@ -73,9 +73,10 @@ Common Issues
 
 Experiment Results 
 -----------
-Every model in the result is an optimized YOLOV5s and is trained for 100 epochs from scratch
-
-Baseline is the result of YOLOv5s train 100 epochs from scratch
+.. note:: - Baseline is the result of YOLOv5s train 100 epochs from scratch.
+          - Every model in the result is an optimized YOLOV5s and is trained for 100 epochs from scratch.
+          - NAS v1 and v2 (ex: DARTs_v1, DARTs_v2) differs from search space. v2 has larger search space than v1.
+          
 
 .. image:: ./Result.png 
    
