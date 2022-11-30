@@ -78,5 +78,5 @@ Experiment Results
           - NAS v1 and v2 (ex: DARTs_v1, DARTs_v2) differs from search space. v2 has larger search space than v1.
           
 
-.. image:: ./Result.png 
+.. image:: ./Final_Result.png 
    
