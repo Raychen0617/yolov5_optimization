@@ -234,6 +234,8 @@
         <li class="md-nav__item"><a href="#error-modelnamespace-is-missing" class="md-nav__link">Error: ModelNamespace is missing</a>
         </li>
         <li class="md-nav__item"><a href="#error-fixed-context-with-label-not-found-existing-values-are-ret" class="md-nav__link">Error: Fixed context with {label} not found. Existing values are: {ret}</a>
+        </li>
+        <li class="md-nav__item"><a href="#error-some-layers-cannot-be-prunned-by-nni" class="md-nav__link">Error: Some layers cannot be prunned by NNI</a>
         </li></ul>
             </nav>
         </li>
@@ -349,6 +351,25 @@ Traceback <span class="o">(</span>most recent call last<span class="o">)</span>:
 </pre></div>
 </div>
 <p>Fix: The Nas output json file does not match the current NAS model keys. Change the output json or modify the NAS Model.</p>
+</section>
+<section id="error-some-layers-cannot-be-prunned-by-nni">
+<h2 id="error-some-layers-cannot-be-prunned-by-nni">Error: Some layers cannot be prunned by NNI<a class="headerlink" href="#error-some-layers-cannot-be-prunned-by-nni" title="Permalink to this heading">¶</a></h2>
+<p>Fix: Go to /nni/compression/pytorch/speedup/compressor.py (line 350) and change the code to</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">while</span> <span class="ow">not</span> <span class="n">visit_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+	<span class="n">curnode</span> <span class="o">=</span> <span class="n">visit_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+	
+  <span class="c1"># put the layer name at here</span>
+	<span class="k">if</span> <span class="s1">'model.10.conv'</span> <span class="ow">in</span> <span class="n">curnode</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="s1">'model.24.aten::select'</span> <span class="ow">in</span> <span class="n">curnode</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+	    <span class="k">continue</span>
+	<span class="c1"># forward mask inference for curnode</span>
+	<span class="bp">self</span><span class="o">.</span><span class="n">update_direct_sparsity</span><span class="p">(</span><span class="n">curnode</span><span class="p">)</span>
+	<span class="n">successors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">torch_graph</span><span class="o">.</span><span class="n">find_successors</span><span class="p">(</span><span class="n">curnode</span><span class="o">.</span><span class="n">unique_name</span><span class="p">)</span>
+	<span class="k">for</span> <span class="n">successor</span> <span class="ow">in</span> <span class="n">successors</span><span class="p">:</span>
+	    <span class="n">in_degree</span><span class="p">[</span><span class="n">successor</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+	    <span class="k">if</span> <span class="n">in_degree</span><span class="p">[</span><span class="n">successor</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+	        <span class="n">visit_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">torch_graph</span><span class="o">.</span><span class="n">name_to_node</span><span class="p">[</span><span class="n">successor</span><span class="p">])</span>
+</pre></div>
+</div>
 </section>
 </section>
 

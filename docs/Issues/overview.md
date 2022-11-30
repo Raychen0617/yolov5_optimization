@@ -98,3 +98,23 @@ Traceback (most recent call last):
     raise KeyError(f'Fixed context with {label} not found. Existing values are: {ret}'
 ```
 Fix: The Nas output json file does not match the current NAS model keys. Change the output json or modify the NAS Model. 
+
+
+## Error: Some layers cannot be prunned by NNI 
+
+Fix: Go to /nni/compression/pytorch/speedup/compressor.py (line 350) and change the code to
+```python
+while not visit_queue.empty():
+	curnode = visit_queue.get()
+	
+  # put the layer name at here
+	if 'model.10.conv' in curnode.name or 'model.24.aten::select' in curnode.name:
+	    continue
+	# forward mask inference for curnode
+	self.update_direct_sparsity(curnode)
+	successors = self.torch_graph.find_successors(curnode.unique_name)
+	for successor in successors:
+	    in_degree[successor] -= 1
+	    if in_degree[successor] == 0:
+	        visit_queue.put(self.torch_graph.name_to_node[successor])
+```

@@ -230,12 +230,12 @@
         <li class="md-nav__item"><a href="#ranking-algorithm" class="md-nav__link">Ranking algorithm</a>
         </li>
         <li class="md-nav__item"><a href="#pruning-scheduler" class="md-nav__link">Pruning Scheduler</a>
+        </li></ul>
+            </nav>
         </li>
         <li class="md-nav__item"><a href="#why-channel-pruning" class="md-nav__link">Why Channel Pruning</a>
         </li>
         <li class="md-nav__item"><a href="#pros-and-cons" class="md-nav__link">Pros and Cons</a>
-        </li></ul>
-            </nav>
         </li>
         <li class="md-nav__item"><a href="#tutorials" class="md-nav__link">Tutorials</a>
         </li></ul>
@@ -281,12 +281,13 @@ Example of channel pruning, for more details, please refer to <a class="referenc
 <p>Experiment results shows that pruning from low sparsity to high sparsity, iteratively increase sparsity with finetuning can significantly reduce accuracy loss
 <img alt="" src="../_images/it_prune.jpg"/></p>
 </section>
+</section>
 <section id="why-channel-pruning">
-<h3 id="why-channel-pruning">Why Channel Pruning<a class="headerlink" href="#why-channel-pruning" title="Permalink to this heading">¶</a></h3>
+<h2 id="why-channel-pruning">Why Channel Pruning<a class="headerlink" href="#why-channel-pruning" title="Permalink to this heading">¶</a></h2>
 <p>Pruning methods can be roughly divided into two categories, sparsification and channel prunning. There are two ways for sparsification, one is to modify the whole model structure. This way is model-specific (we want to use more general pruning methods in this project). Another one is to add masks on model weights. However, this way requires the deep learning framework support for sparse matrix operation speedup to have real effects on the inference time (Pytorch does not support). Therefore, in this project, we choose to use channel pruning, which is a general method (for CNN-based network) and can reduce the inference time no matter the deep learning framework.</p>
 </section>
 <section id="pros-and-cons">
-<h3 id="pros-and-cons">Pros and Cons<a class="headerlink" href="#pros-and-cons" title="Permalink to this heading">¶</a></h3>
+<h2 id="pros-and-cons">Pros and Cons<a class="headerlink" href="#pros-and-cons" title="Permalink to this heading">¶</a></h2>
 <p>Pros:</p>
 <ul class="simple">
 <li><p>Pruning can significantly decrease inference time in general</p></li>
@@ -296,7 +297,6 @@ Example of channel pruning, for more details, please refer to <a class="referenc
 <ul class="simple">
 <li><p>Accuracy loss may be huge</p></li>
 </ul>
-</section>
 </section>
 <section id="tutorials">
 <h2 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this heading">¶</a></h2>

@@ -1,4 +1,4 @@
-Yolov5 Optimization Doc
+YOLOv5 Optimization Doc
 =================
 
 Environment Setup
@@ -8,53 +8,53 @@ Environment Setup
 - `NNI <https://nni.readthedocs.io/en/stable/index.html>`_ 
 - `Fvcore <https://github.com/facebookresearch/fvcore>`_ 
 - `Vision-toolbox <https://github.com/gau-nernst/vision-toolbox>`_
-
+- `Cuda (Test on 11.6.55) <https://developer.nvidia.com/cuda-toolkit-archive>`_
 Quick start
 -----------
 
-.. note::  Some methods only works on Yolov5's backbone (ex: NAS). We then map the new structured backbone back to construct a new detection model.  
+.. note::  Some methods only works on YOLOv5's backbone (ex: NAS). We then map the new structured backbone back to construct a new detection model.  
 
-Test one-shot NAS on Yolov5's backbone
+Test one-shot NAS on YOLOv5's backbone
 
 .. code-block:: bash
 
    $ python oneshot_nas.py 
 
 
-Test multi-trial NAS on Yolov5's backbone 
+Test multi-trial NAS on YOLOv5's backbone 
 
 .. code-block:: bash
 
    $ python hello_nas.py 
 
-Test pruning on Yolov5's backbone 
+Test pruning on YOLOv5's backbone 
 
 .. code-block:: bash
 
    $ python pruning.py 
 
-Test Iterative pruning on Yolov5
+Test Iterative pruning on YOLOv5
 
 .. code-block:: bash
 
    $ bash iterative_pruning.sh 
 
-Test Knowledge Distillation on Yolov5 (Soft targets)
+Test Knowledge Distillation on YOLOv5 (Soft targets)
 
 .. code-block:: bash
 
    $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/student.pt" --t_weights "./checkpoint/teacher.pt"
 
 
-Test Feature Distillation on Yolov5
+Test Feature Distillation on YOLOv5
 
 .. code-block:: bash
 
    $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/multi_nas_yolov5s.pt" --ft_weights "./checkpoint/yolov5m.pt" 
 
-Tutorial
+Optimization Tutorial
 -----------
-This project managed several optimization methods on Yolov5, including:
+This project managed several optimization methods on YOLOv5, including:
 
 * :doc:`Neural Architecture Search </nas/overview>`
 * :doc:`Pruning </pruning/overview>`
@@ -71,7 +71,11 @@ Common Issues
 * :doc:`Common Issues </Issues/overview>`
 
 
-Experiment Results (only 100 epochs for each model)
+Experiment Results 
 -----------
+Every model in the result is an optimized YOLOV5s and is trained for 100 epochs from scratch
+
+Baseline is the result of YOLOv5s train 100 epochs from scratch
+
 .. image:: ./Result.png 
    

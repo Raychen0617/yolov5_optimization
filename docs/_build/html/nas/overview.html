@@ -231,6 +231,8 @@
         </li>
         <li class="md-nav__item"><a href="#oneshot-vs-multi-trail-nas" class="md-nav__link">Oneshot vs Multi-trail NAS</a>
         </li>
+        <li class="md-nav__item"><a href="#pros-and-cons" class="md-nav__link">Pros and Cons</a>
+        </li>
         <li class="md-nav__item"><a href="#tutorials" class="md-nav__link">Tutorials</a>
         </li></ul>
             </nav>
@@ -287,6 +289,18 @@ Example of constructing search space</p>
 <br/><br/></p></li>
 <li><p>Oneshot NAS: One-shot NAS algorithms leverage weight sharing among models in neural architecture search space to train a supernet, and use this supernet to guide the selection of better models. This type of algorihtms greatly reduces computational resource compared to independently training each model from scratch (Multi-trial NAS). The following figure shows how Oneshot NAS trains a supernet.
 <img alt="" src="../_images/oneshot.png"/></p></li>
+</ul>
+</section>
+<section id="pros-and-cons">
+<h2 id="pros-and-cons">Pros and Cons<a class="headerlink" href="#pros-and-cons" title="Permalink to this heading">¶</a></h2>
+<p>Pros:</p>
+<ul class="simple">
+<li><p>NAS can significantly increase the accuracy of models.</p></li>
+<li><p>Multi-trail NAS can even add time limits to ensure both accuracy and efficiency of models.</p></li>
+</ul>
+<p>Cons:</p>
+<ul class="simple">
+<li><p>The training time for NAS is extremely long (especially Multi-trail NAS).</p></li>
 </ul>
 </section>
 <section id="tutorials">

@@ -35,6 +35,14 @@ For more details, please refer to [NNI](https://nni.readthedocs.io/en/stable/nas
 - Oneshot NAS: One-shot NAS algorithms leverage weight sharing among models in neural architecture search space to train a supernet, and use this supernet to guide the selection of better models. This type of algorihtms greatly reduces computational resource compared to independently training each model from scratch (Multi-trial NAS). The following figure shows how Oneshot NAS trains a supernet. 
 ![](./oneshot.png)
 
+## Pros and Cons 
+Pros:
+- NAS can significantly increase the accuracy of models.
+- Multi-trail NAS can even add time limits to ensure both accuracy and efficiency of models. 
+
+Cons: 
+- The training time for NAS is extremely long (especially Multi-trail NAS).
+
 ## Tutorials
 
 [One shot nas on yolov5 backbone](./oneshot.md) <br><br>

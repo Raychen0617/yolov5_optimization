@@ -34,7 +34,7 @@
   
   
   
-    <title>Yolov5 Optimization Doc &#8212; Yolov5 Optimization   documentation</title>
+    <title>YOLOv5 Optimization Doc &#8212; Yolov5 Optimization   documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/material.css" />
   
@@ -100,7 +100,7 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           <span class="md-header-nav__topic">Yolov5 Optimization</span>
-          <span class="md-header-nav__topic"> Yolov5 Optimization Doc </span>
+          <span class="md-header-nav__topic"> YOLOv5 Optimization Doc </span>
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
@@ -221,19 +221,19 @@
 <nav class="md-nav md-nav--secondary">
     <label class="md-nav__title" for="__toc">Contents</label>
   <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#index--page-root" class="md-nav__link">Yolov5 Optimization Doc</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#index--page-root" class="md-nav__link">YOLOv5 Optimization Doc</a><nav class="md-nav">
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#environment-setup" class="md-nav__link">Environment Setup</a>
         </li>
         <li class="md-nav__item"><a href="#quick-start" class="md-nav__link">Quick start</a>
         </li>
-        <li class="md-nav__item"><a href="#tutorial" class="md-nav__link">Tutorial</a>
+        <li class="md-nav__item"><a href="#optimization-tutorial" class="md-nav__link">Optimization Tutorial</a>
         </li>
         <li class="md-nav__item"><a href="#optimization-api" class="md-nav__link">Optimization API</a>
         </li>
         <li class="md-nav__item"><a href="#common-issues" class="md-nav__link">Common Issues</a>
         </li>
-        <li class="md-nav__item"><a href="#experiment-results-only-100-epochs-for-each-model" class="md-nav__link">Experiment Results (only 100 epochs for each model)</a>
+        <li class="md-nav__item"><a href="#experiment-results" class="md-nav__link">Experiment Results</a>
         </li></ul>
             </nav>
         </li>
@@ -252,7 +252,7 @@
           <article class="md-content__inner md-typeset" role="main">
             
   <section id="yolov5-optimization-doc">
-<h1 id="index--page-root">Yolov5 Optimization Doc<a class="headerlink" href="#index--page-root" title="Permalink to this heading">¶</a></h1>
+<h1 id="index--page-root">YOLOv5 Optimization Doc<a class="headerlink" href="#index--page-root" title="Permalink to this heading">¶</a></h1>
 <section id="environment-setup">
 <h2 id="environment-setup">Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
@@ -261,42 +261,43 @@
 <li><p><a class="reference external" href="https://nni.readthedocs.io/en/stable/index.html">NNI</a></p></li>
 <li><p><a class="reference external" href="https://github.com/facebookresearch/fvcore">Fvcore</a></p></li>
 <li><p><a class="reference external" href="https://github.com/gau-nernst/vision-toolbox">Vision-toolbox</a></p></li>
+<li><p><a class="reference external" href="https://developer.nvidia.com/cuda-toolkit-archive">Cuda (Test on 11.6.55)</a></p></li>
 </ul>
 </section>
 <section id="quick-start">
 <h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permalink to this heading">¶</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Some methods only works on Yolov5’s backbone (ex: NAS). We then map the new structured backbone back to construct a new detection model.</p>
+<p>Some methods only works on YOLOv5’s backbone (ex: NAS). We then map the new structured backbone back to construct a new detection model.</p>
 </div>
-<p>Test one-shot NAS on Yolov5’s backbone</p>
+<p>Test one-shot NAS on YOLOv5’s backbone</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python oneshot_nas.py
 </pre></div>
 </div>
-<p>Test multi-trial NAS on Yolov5’s backbone</p>
+<p>Test multi-trial NAS on YOLOv5’s backbone</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python hello_nas.py
 </pre></div>
 </div>
-<p>Test pruning on Yolov5’s backbone</p>
+<p>Test pruning on YOLOv5’s backbone</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python pruning.py
 </pre></div>
 </div>
-<p>Test Iterative pruning on Yolov5</p>
+<p>Test Iterative pruning on YOLOv5</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash iterative_pruning.sh
 </pre></div>
 </div>
-<p>Test Knowledge Distillation on Yolov5 (Soft targets)</p>
+<p>Test Knowledge Distillation on YOLOv5 (Soft targets)</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python train.py --data coco.yaml --epochs <span class="m">101</span> --weights <span class="s2">"./checkpoint/student.pt"</span> --t_weights <span class="s2">"./checkpoint/teacher.pt"</span>
 </pre></div>
 </div>
-<p>Test Feature Distillation on Yolov5</p>
+<p>Test Feature Distillation on YOLOv5</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python train.py --data coco.yaml --epochs <span class="m">101</span> --weights <span class="s2">"./checkpoint/multi_nas_yolov5s.pt"</span> --ft_weights <span class="s2">"./checkpoint/yolov5m.pt"</span>
 </pre></div>
 </div>
 </section>
-<section id="tutorial">
-<h2 id="tutorial">Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h2>
-<p>This project managed several optimization methods on Yolov5, including:</p>
+<section id="optimization-tutorial">
+<h2 id="optimization-tutorial">Optimization Tutorial<a class="headerlink" href="#optimization-tutorial" title="Permalink to this heading">¶</a></h2>
+<p>This project managed several optimization methods on YOLOv5, including:</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="nas/overview.html"><span class="doc">Neural Architecture Search</span></a></p></li>
 <li><p><a class="reference internal" href="pruning/overview.html"><span class="doc">Pruning</span></a></p></li>
@@ -315,8 +316,10 @@
 <li><p><a class="reference internal" href="Issues/overview.html"><span class="doc">Common Issues</span></a></p></li>
 </ul>
 </section>
-<section id="experiment-results-only-100-epochs-for-each-model">
-<h2 id="experiment-results-only-100-epochs-for-each-model">Experiment Results (only 100 epochs for each model)<a class="headerlink" href="#experiment-results-only-100-epochs-for-each-model" title="Permalink to this heading">¶</a></h2>
+<section id="experiment-results">
+<h2 id="experiment-results">Experiment Results<a class="headerlink" href="#experiment-results" title="Permalink to this heading">¶</a></h2>
+<p>Every model in the result is an optimized YOLOV5s and is trained for 100 epochs from scratch</p>
+<p>Baseline is the result of YOLOv5s train 100 epochs from scratch</p>
 <img alt="_images/Result.png" src="_images/Result.png"/>
 </section>
 </section>
