@@ -50,7 +50,7 @@ Test Feature Distillation on YOLOv5
 
 .. code-block:: bash
 
-   $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/multi_nas_yolov5s.pt" --ft_weights "./checkpoint/yolov5m.pt" 
+   $ python train.py --data coco.yaml --epochs 101 --weights "./checkpoint/student.pt" --ft_weights "./checkpoint/teacher.pt"
 
 Optimization Tutorial
 -----------
