@@ -21,7 +21,7 @@ Test one-shot NAS on YOLOv5's backbone
    $ python oneshot_nas.py 
 
 
-Test multi-trial NAS on YOLOv5's backbone 
+Test multi-trial NAS on YOLOv5
 
 .. code-block:: bash
 
