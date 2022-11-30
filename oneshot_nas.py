@@ -3,7 +3,6 @@ from ast import Nonlocal
 import numbers
 import torch
 import torch.nn.functional as F
-import nni.retiarii.nn.pytorch as nn
 from utils.dataloaders import create_tinyimagenet
 from models.yolo import NASBACKBONE, Model
 import nni.retiarii.strategy as strategy
@@ -20,16 +19,16 @@ import os
 device = torch.device("cuda:0")
 
 ########################    USP    ######################################
-save_model_path = "./checkpoint/dartsv2_L1_yolov5s.pt"
+save_model_path = "./checkpoint/random_L2_yolov5s.pt"
 yolo_yaml= "./models/yolov5s.yaml"
-save_json_path = "./output/dartsv2_yolov5s.json"
+save_json_path = "./output/Random_yolov5s.json"
 nas_backbone_yaml = "./models/yolov5sb_nas.yaml"
 nas_traing = False
-
+nas_full_model_weight = "./runs/train/exp2/weights/best.pt"
 # Pruning configs
 to_prune = True
-sparsity = 0.25
-method = "L1"
+sparsity = 0.3439
+method = "L2"
 save_pruned_backbone = None
 ########################    USP    ######################################
 
@@ -78,24 +77,34 @@ if nas_traing:
 
 
 with fixed_arch(save_json_path):
-    backbone = NASBACKBONE(cfg=nas_backbone_yaml, nc=200).to(device=device)
+    nasbackbone = NASBACKBONE(cfg=nas_backbone_yaml, nc=200).to(device=device)
 
+from optimizer.match import fix_nasbackbone, match
 if to_prune:
-    backbone = prune(model=backbone, save=save_pruned_backbone, sparsity=sparsity, method=method)
+    nasbackbone.backbone.load_state_dict(torch.load(nas_full_model_weight)['model'].state_dict(), strict=False)
+    nasbackbone = prune(model=nasbackbone, save=save_pruned_backbone, sparsity=sparsity, method=method)
+    
+    
+    from models.yolo import BACKBONE
+    ori_backbone_yaml = './models/yolov5sb.yaml'
+    backbone = BACKBONE(cfg=ori_backbone_yaml, nc=200).to(device=device).backbone
+    backbone = fix_nasbackbone(backbone, nasbackbone.backbone)
 
 
 yolo = Model(yolo_yaml).to(device=device) 
-match_nas(yolo, backbone, save_model_path)
-
+#match_nas(yolo, backbone, save_model_path)
+yolo = match(yolo=yolo,  pruned_yolo=backbone, save=None)
+yolo.to(device).float()
+torch.save(yolo, save_model_path)
 print("Success, json file is saved at ", save_json_path,"    pt file is saved at", save_model_path)
 print("You can train the model by runining     python train.py --weights ", save_model_path, " --data coco.yaml --epochs 101")
 
 
+# Detection oneshot NAS failed w_w 
 '''
 
 from nni.retiarii.evaluator.pytorch import ClassificationModule
 class DetectionModule(ClassificationModule):
-
     def __init__(
         self,
         epochs: int = 1,
@@ -117,11 +126,9 @@ class DetectionModule(ClassificationModule):
     @property
     def automatic_optimization(self) -> bool:
         return True
-
     def configure_optimizers(self):
         
         """Customized optimizer with momentum, as well as a scheduler."""
-
         # Optimizer
         accumulate = max(round(self.nbs / self.batch_size), 1)  # accumulate loss before optimizing
         self.hyp['weight_decay'] *= self.batch_size * accumulate / self.nbs  # scale weight_decay
@@ -137,13 +144,11 @@ class DetectionModule(ClassificationModule):
         
         return [optimizer], [scheduler]
         
-
     def training_step(self, batch, batch_idx):
     
         imgs, targets, _ , _ = batch
         print(imgs.shape)
         imgs = imgs.float() / 255
-
         from utils.loss import NASComputeLoss
         compute_loss = NASComputeLoss(model=self, h=self.hyp)
         pred = self(imgs)
@@ -160,8 +165,6 @@ class DetectionModule(ClassificationModule):
         
         self.log('train_loss', loss, prog_bar=True)
         return loss
-
-
     def validation_step(self, batch, batch_idx):
         import numpy as np
         nc = 5  # number of classes
@@ -174,13 +177,11 @@ class DetectionModule(ClassificationModule):
         dt, p, r, f1, mp, mr, map50, map = [0.0, 0.0, 0.0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         loss = torch.zeros(3, device=device)
         jdict, stats, ap, ap_class = [], [], [], []
-
         from utils.metrics import box_iou,  ap_per_class
         im, targets, paths, shapes = batch
         im = im.float()
         nb, _, height, width = im.shape  # batch size, channels, height, width
         out, train_out = self.model(im)
-
         # Metrics
         for si, pred in enumerate(out):
             labels = targets[targets[:, 0] == si, 1:]
@@ -189,17 +190,14 @@ class DetectionModule(ClassificationModule):
             path, shape = Path(paths[si]), shapes[si][0]
             correct = torch.zeros(npr, niou, dtype=torch.bool, device=device)  # init
             seen += 1
-
             if npr == 0:
                 if nl:
                     stats.append((correct, *torch.zeros((2, 0), device=device), labels[:, 0]))
                 continue
-
             # Predictions
             predn = pred.clone()
             from utils.general import scale_coords, xywh2xyxy
             scale_coords(im[si].shape[1:], predn[:, :4], shape, shapes[si][1])  # native-space pred
-
             def process_batch(detections, labels, iouv):
                 import numpy as np
                 correct = np.zeros((detections.shape[0], iouv.shape[0])).astype(bool)
@@ -216,7 +214,6 @@ class DetectionModule(ClassificationModule):
                             matches = matches[np.unique(matches[:, 0], return_index=True)[1]]
                         correct[matches[:, 1].astype(int), i] = True
                 return torch.tensor(correct, dtype=torch.bool, device=iouv.device)
-
             # Evaluate
             if nl:
                 tbox = xywh2xyxy(labels[:, 1:5])  # target boxes
@@ -224,7 +221,6 @@ class DetectionModule(ClassificationModule):
                 labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
                 correct = process_batch(predn, labelsn, iouv)
             stats.append((correct, pred[:, 4], pred[:, 5], labels[:, 0]))  # (correct, conf, pcls, tcls)
-
             # Compute metrics
             stats = [torch.cat(x, 0).cpu().numpy() for x in zip(*stats)]  # to numpy
             if len(stats) and stats[0].any():
@@ -232,31 +228,25 @@ class DetectionModule(ClassificationModule):
                 ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
                 mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
             nt = np.bincount(stats[3].astype(int), minlength=nc)  # number of targets per class
-
             maps = np.zeros(nc) + map
             for i, c in enumerate(ap_class):
                 maps[c] = ap[i]
-
             self.log('val_loss', map, prog_bar=True)
             return map50
-
 import io
 import json
 import tempfile
 import contextlib
 from pycocotools.cocoeval import COCOeval
-
 def COCOEvaluator(json_list, val_dataset):
     # detections: (x1, y1, x2, y2, obj_conf, class_conf, class)
     cocoGt = val_dataset.coco
     # pycocotools box format: (x1, y1, w, h)
     annType = ["segm", "bbox", "keypoints"]
-
     if len(json_list) > 0:
         _, tmp = tempfile.mkstemp()
         json.dump(json_list, open(tmp, "w"), skipkeys=True, ensure_ascii=True)
         cocoDt = cocoGt.loadRes(tmp)
-
         coco_pred = {"images": [], "categories": []}
         for (k, v) in cocoGt.imgs.items():
             coco_pred["images"].append(v)
@@ -264,7 +254,6 @@ def COCOEvaluator(json_list, val_dataset):
             coco_pred["categories"].append(v)
         coco_pred["annotations"] = json_list
         # json.dump(coco_pred, open("./COCO_val.json", "w"))
-
         cocoEval = COCOeval(cocoGt, cocoDt, annType[1])
         cocoEval.evaluate()
         cocoEval.accumulate()
@@ -275,19 +264,13 @@ def COCOEvaluator(json_list, val_dataset):
         return cocoEval.stats[0], cocoEval.stats[1], info
     else:
         return 0.0, 0.0, "No detection!"
-
-
-
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
 # Parameters
 hyp = 'data/hyps/hyp.scratch-low.yaml'
-
 if isinstance(hyp, str):
     with open(hyp, errors='ignore') as f:
         hyp = yaml.safe_load(f) 
     
-
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
 imgsz = 640
 batch_size = 8
@@ -297,12 +280,10 @@ train_path = "/home/raytjchen/Desktop/code/datasets/coco128/images/train2017"
 gs = 32
 nbs = 64  # nominal batch size
 epochs = 4 # how many epochs to train for a single choice 
-
 # Optimizer
 accumulate = max(round(nbs / batch_size), 1)  # accumulate loss before optimizing
 print("**********************************************", accumulate)
 hyp['weight_decay'] *= batch_size * accumulate / nbs  # scale weight_decay
-
 # Create Trainloader
 from utils.dataloaders import create_dataloader
 train_loader, dataset = create_dataloader(train_path,
@@ -320,8 +301,6 @@ train_loader, dataset = create_dataloader(train_path,
                                             quad=False,
                                             prefix=colorstr('train: '),
                                             shuffle=True)
-
-
 # Create Testloader
 val_path = "/home/raytjchen/Desktop/code/datasets/coco/images/val2017"
 val_loader = create_dataloader(
@@ -337,11 +316,8 @@ val_loader = create_dataloader(
                             workers=1,
                             pad=0.5,
                             prefix=colorstr('val: '))[0]
-
 from nni.retiarii.evaluator.pytorch import Lightning, Trainer
-
 max_epochs = 1
-
 evaluator = Lightning(
     DetectionModule(epochs=max_epochs, hyp=hyp, batch_size=batch_size),
     Trainer(
@@ -353,23 +329,16 @@ evaluator = Lightning(
     train_dataloaders=train_loader,
     val_dataloaders=val_loader,
 )
-
 from nni.retiarii.strategy import DARTS as DartsStrategy
 strategy = DartsStrategy()
-
 from nni.retiarii.experiment.pytorch import RetiariiExperiment, RetiariiExeConfig
-
 config = RetiariiExeConfig(execution_engine='oneshot')
 cfg="./models/yolov5s_nas.yaml"
 model_space = Model(cfg=cfg, ch=3, nc=80, anchors=hyp.get('anchors')).to(device)
 experiment = RetiariiExperiment(model_space, evaluator=evaluator, strategy=strategy)
 experiment.run(config)
-
 exported_arch = experiment.export_top_models()[0]
 print(exported_arch)
-
-
 with fixed_arch(exported_arch):
     final_model = Model(cfg=cfg, ch=3, nc=80, anchors=hyp.get('anchors')).to(device)
-
 '''
