@@ -43,7 +43,7 @@ Pros:
 Cons: 
 - The training time for NAS is extremely long (especially Multi-trail NAS).
 
-## Tutorials
+## Code Tutorials
 
 [One shot nas on yolov5 backbone](./oneshot.md) <br><br>
 [Multi-trial nas on yolov5](./multi-trial.md) 

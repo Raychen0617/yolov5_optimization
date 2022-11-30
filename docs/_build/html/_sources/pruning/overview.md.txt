@@ -34,6 +34,6 @@ Pros:
 Cons: 
 - Accuracy loss may be huge 
 
-## Tutorials
+## Code Tutorials
 [Iterative pruning on yolov5](./iterative_pruning.md) <br><br>
 [Pruning on yolov5 backbone](./prune.md) 

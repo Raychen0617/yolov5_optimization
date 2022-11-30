@@ -34,7 +34,7 @@ Cons:
 - Need to choose an appropriate student 
 
 
-## Tutorials
+## Code Tutorials
 
 [Distill logits on Yolov5](./logits.md) <br><br>
 [Distill features on Yolov5](./feature.md)
